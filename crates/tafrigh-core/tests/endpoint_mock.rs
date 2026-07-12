@@ -12,10 +12,9 @@ fn posts_multipart_with_auth_and_parses_arabic_text() {
         .mock("POST", "/v2/audio/transcriptions")
         .match_header("authorization", "Bearer testkey")
         .match_body(mockito::Matcher::AllOf(vec![
-            mockito::Matcher::Regex(r#"name="file""#.to_string()),
-            mockito::Matcher::Regex(r#"name="model""#.to_string()),
             mockito::Matcher::Regex("cohere-transcribe-arabic".to_string()),
-            mockito::Matcher::Regex(r#"name="language""#.to_string()),
+            // Order matters: Cohere requires model + language BEFORE the file part.
+            mockito::Matcher::Regex(r#"(?s)name="model".*name="language".*name="file""#.to_string()),
         ]))
         .with_status(200)
         .with_header("content-type", "application/json")

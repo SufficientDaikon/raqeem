@@ -78,12 +78,14 @@ impl Transcriber {
             .unwrap_or("audio")
             .to_string();
 
-        // Same multipart shape for every backend: file + model + language.
+        // Same multipart shape for every backend: model + language + file.
+        // Order matters: Cohere rejects the request unless the text fields
+        // (model, language) appear BEFORE the file part in the body.
         let file_part = reqwest::blocking::multipart::Part::bytes(bytes).file_name(filename);
         let form = reqwest::blocking::multipart::Form::new()
-            .part("file", file_part)
             .text("model", self.endpoint.model.clone())
-            .text("language", self.language.clone());
+            .text("language", self.language.clone())
+            .part("file", file_part);
 
         let mut req = self.client.post(&self.endpoint.url).multipart(form);
         if let Some(key) = &self.endpoint.api_key {
