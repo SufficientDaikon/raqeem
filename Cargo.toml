@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = ["crates/tafrigh-core", "crates/tafrigh-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/SufficientDaikon/tafrigh"
+authors = ["Ahmed Taha <tahaa755@gmail.com>"]
+description = "تفريغ — an easy, language-agnostic client for Cohere's open Arabic ASR model."
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "multipart", "rustls-tls"] }
+thiserror = "2"
+clap = { version = "4", features = ["derive", "env"] }

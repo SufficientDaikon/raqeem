@@ -1,0 +1,16 @@
+[package]
+name = "tafrigh-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "CLI for tafrigh — transcribe Arabic audio via Cohere's open ASR model."
+
+[[bin]]
+name = "tafrigh"
+path = "src/main.rs"
+
+[dependencies]
+tafrigh-core = { path = "../tafrigh-core" }
+clap.workspace = true

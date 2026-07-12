@@ -1,0 +1,17 @@
+[package]
+name = "tafrigh-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Core library for tafrigh — an easy client for Cohere's open Arabic ASR model."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+reqwest.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+mockito = "1"
