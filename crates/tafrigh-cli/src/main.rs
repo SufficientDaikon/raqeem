@@ -36,7 +36,8 @@ struct Cli {
     #[arg(long)]
     endpoint: Option<String>,
 
-    /// Model id to request (defaults to cohere-transcribe-arabic).
+    /// Model id to request. Cohere needs a dated id; defaults to
+    /// cohere-transcribe-arabic-07-2026 (undated aliases 404).
     #[arg(long)]
     model: Option<String>,
 

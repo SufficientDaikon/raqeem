@@ -6,8 +6,10 @@ use crate::provider::Provider;
 
 /// Cohere's hosted transcription endpoint.
 pub const COHERE_URL: &str = "https://api.cohere.com/v2/audio/transcriptions";
-/// Default model id for the Arabic transcriber.
-pub const DEFAULT_COHERE_MODEL: &str = "cohere-transcribe-arabic";
+/// Default model id for the Arabic transcriber. Cohere requires a **dated** model
+/// id — undated aliases (`cohere-transcribe-arabic`) return HTTP 404 "model not
+/// found". Bump this when Cohere ships a newer dated Arabic transcription model.
+pub const DEFAULT_COHERE_MODEL: &str = "cohere-transcribe-arabic-07-2026";
 
 /// Where and how to reach a transcription server.
 #[derive(Debug, Clone)]
