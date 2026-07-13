@@ -22,6 +22,15 @@ tafrigh your_clip.wav \
   --lang ar --format json
 ```
 
+## Run the model locally (dev, no cloud)
+
+[`serve_local.py`](serve_local.py) is a small torch server that loads the model and
+exposes the OpenAI-compatible endpoint `tafrigh --provider openai` talks to. It runs on
+**CPU anywhere** and uses a GPU automatically if torch sees one (NVIDIA CUDA, or AMD ROCm
+on Linux/WSL2 — native Windows ROCm only covers RDNA4 today, so AMD-on-Windows falls back
+to CPU). See the file's docstring for setup. This is the heavy model-side half — it is
+**not** part of the lightweight Rust client.
+
 ## Grab a test clip quickly
 
 Cohere's demo Space accepts recordings if you just want to hear the model:
