@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::time::Duration;
 
 use clap::{Parser, ValueEnum};
 use tafrigh_core::{Endpoint, OutputFormat, Transcriber, DEFAULT_COHERE_MODEL};
@@ -24,7 +25,9 @@ struct Cli {
     #[arg(long, value_enum, default_value_t = ProviderArg::Cohere)]
     provider: ProviderArg,
 
-    /// API key. Falls back to $TAFRIGH_API_KEY, then $COHERE_API_KEY.
+    /// API key. Falls back to $TAFRIGH_API_KEY. For `--provider cohere` only, it
+    /// also falls back to $COHERE_API_KEY — that Cohere-scoped key is never sent to
+    /// a self-hosted `--endpoint`.
     #[arg(long, env = "TAFRIGH_API_KEY")]
     api_key: Option<String>,
 
@@ -40,6 +43,11 @@ struct Cli {
     /// Transcription language (ISO-639-1).
     #[arg(long, default_value = "ar")]
     lang: String,
+
+    /// Total request timeout in seconds — covers upload + inference + download.
+    /// Raise it for slow CPU inference or long recordings.
+    #[arg(long, default_value_t = 300)]
+    timeout: u64,
 
     /// Output format.
     #[arg(long, value_enum, default_value_t = FormatArg::Text)]
@@ -72,8 +80,28 @@ fn main() -> ExitCode {
     }
 }
 
+/// The API key to send, given the provider and the two already-read sources.
+/// `explicit` is `--api-key` (clap also folds in `$TAFRIGH_API_KEY` via `env=`).
+/// Only the Cohere provider may fall back to the Cohere-scoped `$COHERE_API_KEY`;
+/// a self-hosted `--endpoint` must never receive it, or that key leaks to a
+/// third-party server.
+fn api_key_for(
+    provider: ProviderArg,
+    explicit: Option<String>,
+    cohere_env: Option<String>,
+) -> Option<String> {
+    match provider {
+        ProviderArg::Cohere => explicit.or(cohere_env),
+        ProviderArg::Openai => explicit,
+    }
+}
+
 fn run(cli: Cli) -> std::result::Result<String, String> {
-    let api_key = cli.api_key.or_else(|| std::env::var("COHERE_API_KEY").ok());
+    let api_key = api_key_for(
+        cli.provider,
+        cli.api_key,
+        std::env::var("COHERE_API_KEY").ok(),
+    );
 
     let endpoint = match cli.provider {
         ProviderArg::Cohere => {
@@ -98,10 +126,51 @@ fn run(cli: Cli) -> std::result::Result<String, String> {
         FormatArg::Json => OutputFormat::Json,
     };
 
-    let transcript = Transcriber::new(endpoint)
+    let transcript = Transcriber::with_timeout(endpoint, Duration::from_secs(cli.timeout))
         .language(cli.lang)
         .transcribe(&cli.audio)
         .map_err(|e| e.to_string())?;
 
     Ok(format.render(&transcript))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{api_key_for, ProviderArg};
+
+    #[test]
+    fn cohere_falls_back_to_cohere_env() {
+        // no explicit key → the Cohere-scoped env is used
+        assert_eq!(
+            api_key_for(ProviderArg::Cohere, None, Some("cohere-key".into())),
+            Some("cohere-key".into())
+        );
+        // an explicit key (--api-key / $TAFRIGH_API_KEY) wins over the fallback
+        assert_eq!(
+            api_key_for(
+                ProviderArg::Cohere,
+                Some("explicit".into()),
+                Some("cohere-key".into())
+            ),
+            Some("explicit".into())
+        );
+    }
+
+    #[test]
+    fn openai_never_uses_cohere_env() {
+        // a self-hosted endpoint must NOT receive the Cohere-scoped key
+        assert_eq!(
+            api_key_for(ProviderArg::Openai, None, Some("cohere-key".into())),
+            None
+        );
+        // but an explicit key set for that endpoint is still honored
+        assert_eq!(
+            api_key_for(
+                ProviderArg::Openai,
+                Some("mykey".into()),
+                Some("cohere-key".into())
+            ),
+            Some("mykey".into())
+        );
+    }
 }

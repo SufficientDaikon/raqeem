@@ -3,10 +3,13 @@
 //! matching-stable form so downstream parsers (price extraction, commodity
 //! matching) never fuzzy-match raw, unnormalized Arabic.
 //!
-//! Kept byte-for-byte faithful to the Python reference: strip diacritics /
-//! tatweel / Quranic marks, unify alef and hamza carriers, taa-marbuta → haa,
-//! Arabic-Indic & Persian digits → ASCII, and the Arabic decimal separator
-//! U+066B → `.` (so «١٢٫٥» folds to `12.5`, one number, not two).
+//! Faithful to the Python reference — identical output on all Arabic and ASCII
+//! input: strip diacritics / tatweel / Quranic marks, unify alef and hamza
+//! carriers, taa-marbuta → haa, Arabic-Indic & Persian digits → ASCII, and the
+//! Arabic decimal separator U+066B → `.` (so «١٢٫٥» folds to `12.5`, one number,
+//! not two). Context-sensitive Unicode case tailoring aside — Python lower-cases a
+//! word-final Greek `Σ` to `ς`, Rust to `σ` — which is out of domain for Arabic
+//! transcripts, and scout re-normalizes via the Python function downstream anyway.
 
 /// Fold Arabic text to a matching-stable form. Idempotent; ASCII passes through
 /// lower-cased, so it is safe to run unconditionally on any transcript.

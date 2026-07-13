@@ -28,9 +28,16 @@ pub use output::OutputFormat;
 pub use provider::Provider;
 
 use std::path::Path;
+use std::time::Duration;
 
 /// Default transcription language (ISO-639-1). Arabic-first, by design.
 pub const DEFAULT_LANGUAGE: &str = "ar";
+
+/// Default total-request timeout, in seconds. Generous on purpose: it must cover
+/// upload + model inference + download, and CPU inference of a voice note can take
+/// many seconds. (reqwest's blocking client otherwise silently defaults to 30s,
+/// which truncates a slow transcription mid-inference.)
+pub const DEFAULT_TIMEOUT_SECS: u64 = 300;
 
 /// A completed transcription. `text` is the model's verbatim output; the folded
 /// `text_normalized` (see [`normalize_ar`]) is what downstream parsers consume.
@@ -51,12 +58,24 @@ pub struct Transcriber {
 }
 
 impl Transcriber {
-    /// Build a transcriber for the given endpoint, defaulting to Arabic.
+    /// Build a transcriber for the given endpoint, defaulting to Arabic and a
+    /// [`DEFAULT_TIMEOUT_SECS`] total-request timeout.
     pub fn new(endpoint: Endpoint) -> Self {
+        Self::with_timeout(endpoint, Duration::from_secs(DEFAULT_TIMEOUT_SECS))
+    }
+
+    /// Like [`new`](Self::new) but with an explicit total-request timeout — raise it
+    /// for slow CPU inference or large files, lower it to fail faster. The timeout
+    /// spans the whole round-trip (connect + upload + inference + download).
+    pub fn with_timeout(endpoint: Endpoint, timeout: Duration) -> Self {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(timeout)
+            .build()
+            .unwrap_or_else(|_| reqwest::blocking::Client::new());
         Transcriber {
             endpoint,
             language: DEFAULT_LANGUAGE.to_string(),
-            client: reqwest::blocking::Client::new(),
+            client,
         }
     }
 
