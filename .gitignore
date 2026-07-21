@@ -1,3 +1,13 @@
-/target
+# Not `/target`: raqeem-python is excluded from the cargo workspace, so it builds
+# into its own crates/raqeem-python/target/ that a root-anchored rule would miss.
+target/
 **/*.rs.bk
 .DS_Store
+
+# Python binding build artifacts
+.venv-dev/
+dist/
+__pycache__/
+*.pyd
+*.so
+.pytest_cache/

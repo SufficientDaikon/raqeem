@@ -1,10 +1,10 @@
 <div dir="rtl">
 
-# تفريغ · tafrigh
+# رقيم · raqeem
 
 **أسهل طريقة لاستخدام نموذج Cohere المفتوح للتعرّف على الكلام العربي.**
 
-`tafrigh` (تفريغ) غلافٌ خفيف حول
+`raqeem` (رقيم) غلافٌ خفيف حول
 [`CohereLabs/cohere-transcribe-arabic-07-2026`](https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026)
 — أدقّ نموذج مفتوح المصدر في العالم للتعرّف على الكلام العربي (لهجات + عربي/إنجليزي مختلط)،
 تحت رخصة Apache 2.0. يأخذ ملفًّا صوتيًّا ويُرجِع نصًّا عربيًّا — من سطر الأوامر أو من أي
@@ -17,17 +17,17 @@ vLLM تشغّله بنفسك. الأداة لا تُحمّل أوزان النم
 
 ---
 
-[![CI](https://github.com/SufficientDaikon/tafrigh/actions/workflows/ci.yml/badge.svg)](https://github.com/SufficientDaikon/tafrigh/actions/workflows/ci.yml)
+[![CI](https://github.com/SufficientDaikon/raqeem/actions/workflows/ci.yml/badge.svg)](https://github.com/SufficientDaikon/raqeem/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**English:** `tafrigh` is a lightweight client for
+**English:** `raqeem` is a lightweight client for
 [`CohereLabs/cohere-transcribe-arabic-07-2026`](https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026)
 — the world's most accurate open-source Arabic speech-recognition model (dialects +
 Arabic/English code-switching), Apache-2.0. Give it an audio file, get Arabic text — from
 the CLI or from any language by shelling out to the binary.
 
 Inference is **always delegated** to an endpoint you choose (Cohere's hosted API, or your
-own vLLM). `tafrigh` loads no weights, so it stays small and fast — a single static binary
+own vLLM). `raqeem` loads no weights, so it stays small and fast — a single static binary
 with no runtime. It also folds the output through Arabic normalization (alef/hamza,
 taa-marbuta, tatweel + diacritics, Arabic digits → ASCII) so downstream parsers get a
 stable form.
@@ -38,21 +38,27 @@ stable form.
 
 ## Install
 
-**Prebuilt binary** — grab one for Linux / macOS / Windows from
-[Releases](https://github.com/SufficientDaikon/tafrigh/releases). No runtime, no
+**Python** — a compiled extension, no `torch`, no subprocess:
+
+```bash
+pip install raqeem
+```
+
+**Prebuilt binary (CLI)** — grab one for Linux / macOS / Windows from
+[Releases](https://github.com/SufficientDaikon/raqeem/releases). No runtime, no
 dependencies.
 
 **With cargo:**
 
 ```bash
-cargo install --git https://github.com/SufficientDaikon/tafrigh tafrigh-cli
+cargo install --git https://github.com/SufficientDaikon/raqeem raqeem-cli
 ```
 
 **From source:**
 
 ```bash
-git clone https://github.com/SufficientDaikon/tafrigh
-cd tafrigh && cargo build --release   # binary at target/release/tafrigh
+git clone https://github.com/SufficientDaikon/raqeem
+cd raqeem && cargo build --release   # binary at target/release/raqeem
 ```
 
 ## Usage
@@ -61,7 +67,7 @@ cd tafrigh && cargo build --release   # binary at target/release/tafrigh
 
 ```bash
 export COHERE_API_KEY=...          # or pass --api-key
-tafrigh voice_note.ogg --lang ar
+raqeem voice_note.ogg --lang ar
 ```
 
 **Your own vLLM** (self-hosted, OpenAI-compatible — no API key, no rate limits):
@@ -69,7 +75,7 @@ tafrigh voice_note.ogg --lang ar
 ```bash
 # on your GPU box / VPS:
 #   vllm serve CohereLabs/cohere-transcribe-arabic-07-2026 --trust-remote-code
-tafrigh clip.wav \
+raqeem clip.wav \
   --provider openai \
   --endpoint http://localhost:8000/v1/audio/transcriptions \
   --lang ar
@@ -81,7 +87,7 @@ the same endpoint.
 **JSON output** (verbatim + normalized + provenance — this is what programs consume):
 
 ```bash
-tafrigh voice_note.ogg --format json
+raqeem voice_note.ogg --format json
 ```
 
 ```json
@@ -97,16 +103,32 @@ tafrigh voice_note.ogg --format json
 `text` is the model verbatim (show this to a human); `text_normalized` is folded for
 matching — note the tatweel stripped and `١٢٫٥` → `12.5` as **one** number, not two.
 
-Call it from anything — e.g. Python:
+## From Python
+
+`pip install raqeem` gives you a **native extension** built from this same Rust core —
+no `torch`, no model weights, no subprocess:
 
 ```python
-import json, subprocess
-out = subprocess.run(
-    ["tafrigh", "note.ogg", "--lang", "ar", "--format", "json"],
-    capture_output=True, text=True, encoding="utf-8", check=True,
-)
-text = json.loads(out.stdout)["text_normalized"]
+import raqeem
+
+t = raqeem.transcribe("voice_note.ogg", lang="ar")   # reads $COHERE_API_KEY
+print(t.text)              # verbatim, for humans
+print(t.text_normalized)   # Arabic-folded, for parsing
+print(t.to_dict())
+
+# your own vLLM — the Cohere-scoped key is deliberately never sent to a self-hosted endpoint
+raqeem.transcribe("clip.wav", provider="openai",
+                  endpoint="http://localhost:8000/v1/audio/transcriptions")
+
+raqeem.normalize_ar("الطماطم بـ ١٢٫٥ جنيه")   # 'الطماطم ب 12.5 جنيه'
 ```
+
+Failures raise `raqeem.TranscriptionError`; a bad provider or a missing key/endpoint
+raises `ValueError`. Type stubs ship with the wheel, so editors autocomplete. One `abi3`
+wheel per OS/arch covers CPython 3.9+.
+
+Any other language can drive the binary directly — `raqeem clip.ogg --format json` prints
+the same JSON to stdout.
 
 ### Options worth knowing
 
@@ -114,7 +136,7 @@ text = json.loads(out.stdout)["text_normalized"]
 |---|---|---|
 | `--model` | `cohere-transcribe-arabic-07-2026` | Cohere needs a **dated** id — undated aliases 404. |
 | `--timeout` | `300` | Seconds, covers upload + inference + download. Raise for slow CPU inference. |
-| `--api-key` | — | Falls back to `$TAFRIGH_API_KEY`. For `--provider cohere` **only**, also `$COHERE_API_KEY` — that Cohere-scoped key is deliberately never sent to a self-hosted `--endpoint`. |
+| `--api-key` | — | Falls back to `$RAQEEM_API_KEY`. For `--provider cohere` **only**, also `$COHERE_API_KEY` — that Cohere-scoped key is deliberately never sent to a self-hosted `--endpoint`. |
 
 ## Status — what's verified, honestly
 
@@ -145,7 +167,7 @@ Also: RTFx ≈ 525 (much faster than Whisper), preferred over Whisper in 95.8% o
 tests, covers MSA + Egyptian/Gulf/Levantine/Maghrebi + English + code-switching.
 
 **What the model gives you:** text only. No timestamps, diarization, language detection, or
-VAD. Those are `tafrigh`'s roadmap, not the model's job.
+VAD. Those are `raqeem`'s roadmap, not the model's job.
 
 ## Supported audio
 

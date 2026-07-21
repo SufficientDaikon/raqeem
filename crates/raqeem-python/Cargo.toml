@@ -1,0 +1,20 @@
+[package]
+name = "raqeem-python"
+version = "0.2.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/SufficientDaikon/raqeem"
+homepage = "https://github.com/SufficientDaikon/raqeem"
+authors = ["Ahmed Taha <tahaa755@gmail.com>"]
+description = "Python bindings for raqeem — Cohere's open Arabic ASR, from Python."
+publish = false
+
+[lib]
+name = "raqeem"
+# cdylib for the Python extension module; rlib so `cargo test` can still build it.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+raqeem-core = { path = "../raqeem-core" }
+# abi3-py39: one wheel per OS/arch works on CPython 3.9+, instead of one per version.
+pyo3 = { version = "0.28", features = ["abi3-py39"] }

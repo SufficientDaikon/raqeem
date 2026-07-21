@@ -1,4 +1,4 @@
-//! `tafrigh` — تفريغ. Transcribe Arabic audio from the command line.
+//! `raqeem` — رقيم. Transcribe Arabic audio from the command line.
 //!
 //! The binary is the universal calling surface: any language (scout's Python,
 //! a shell script, a Node service) drives it by shelling out and reading stdout.
@@ -8,14 +8,14 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use clap::{Parser, ValueEnum};
-use tafrigh_core::{Endpoint, OutputFormat, Transcriber, DEFAULT_COHERE_MODEL};
+use raqeem_core::{Endpoint, OutputFormat, Transcriber, DEFAULT_COHERE_MODEL};
 
-/// تفريغ — transcribe Arabic audio with Cohere's open ASR model.
+/// رقيم — transcribe Arabic audio with Cohere's open ASR model.
 #[derive(Parser)]
 #[command(
-    name = "tafrigh",
+    name = "raqeem",
     version,
-    about = "تفريغ — transcribe Arabic audio via Cohere's open ASR model"
+    about = "رقيم — transcribe Arabic audio via Cohere's open ASR model"
 )]
 struct Cli {
     /// Path to the audio file (flac / mp3 / mpeg / mpga / ogg / wav).
@@ -25,10 +25,10 @@ struct Cli {
     #[arg(long, value_enum, default_value_t = ProviderArg::Cohere)]
     provider: ProviderArg,
 
-    /// API key. Falls back to $TAFRIGH_API_KEY. For `--provider cohere` only, it
+    /// API key. Falls back to $RAQEEM_API_KEY. For `--provider cohere` only, it
     /// also falls back to $COHERE_API_KEY — that Cohere-scoped key is never sent to
     /// a self-hosted `--endpoint`.
-    #[arg(long, env = "TAFRIGH_API_KEY")]
+    #[arg(long, env = "RAQEEM_API_KEY")]
     api_key: Option<String>,
 
     /// Full endpoint URL for a self-hosted OpenAI-compatible server, e.g.
@@ -82,7 +82,7 @@ fn main() -> ExitCode {
 }
 
 /// The API key to send, given the provider and the two already-read sources.
-/// `explicit` is `--api-key` (clap also folds in `$TAFRIGH_API_KEY` via `env=`).
+/// `explicit` is `--api-key` (clap also folds in `$RAQEEM_API_KEY` via `env=`).
 /// Only the Cohere provider may fall back to the Cohere-scoped `$COHERE_API_KEY`;
 /// a self-hosted `--endpoint` must never receive it, or that key leaks to a
 /// third-party server.
@@ -107,7 +107,7 @@ fn run(cli: Cli) -> std::result::Result<String, String> {
     let endpoint = match cli.provider {
         ProviderArg::Cohere => {
             let key = api_key.ok_or(
-                "cohere provider needs an API key (--api-key, or $TAFRIGH_API_KEY / $COHERE_API_KEY)",
+                "cohere provider needs an API key (--api-key, or $RAQEEM_API_KEY / $COHERE_API_KEY)",
             )?;
             Endpoint::cohere(key, cli.model)
         }
@@ -146,7 +146,7 @@ mod tests {
             api_key_for(ProviderArg::Cohere, None, Some("cohere-key".into())),
             Some("cohere-key".into())
         );
-        // an explicit key (--api-key / $TAFRIGH_API_KEY) wins over the fallback
+        // an explicit key (--api-key / $RAQEEM_API_KEY) wins over the fallback
         assert_eq!(
             api_key_for(
                 ProviderArg::Cohere,

@@ -2,7 +2,7 @@
 //! network, no API key, no model. Asserts the multipart body carries the fields
 //! every backend expects and that an Arabic response parses + normalizes.
 
-use tafrigh_core::{Endpoint, Transcriber};
+use raqeem_core::{Endpoint, Transcriber};
 
 #[test]
 fn posts_multipart_with_auth_and_parses_arabic_text() {
@@ -28,7 +28,7 @@ fn posts_multipart_with_auth_and_parses_arabic_text() {
     let endpoint =
         Endpoint::openai_compatible(url, "cohere-transcribe-arabic", Some("testkey".into()));
 
-    let audio = std::env::temp_dir().join("tafrigh_test_clip.wav");
+    let audio = std::env::temp_dir().join("RAQEEM_test_clip.wav");
     std::fs::write(&audio, b"RIFF....WAVEfake").unwrap();
 
     let t = Transcriber::new(endpoint)
@@ -58,7 +58,7 @@ fn surfaces_api_errors_with_status_and_body() {
     let url = format!("{}/v1/audio/transcriptions", server.url());
     let endpoint = Endpoint::openai_compatible(url, "m", None);
 
-    let audio = std::env::temp_dir().join("tafrigh_test_clip2.wav");
+    let audio = std::env::temp_dir().join("RAQEEM_test_clip2.wav");
     std::fs::write(&audio, b"x").unwrap();
 
     let err = Transcriber::new(endpoint).transcribe(&audio).unwrap_err();

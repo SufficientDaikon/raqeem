@@ -1,0 +1,89 @@
+name: Python
+
+# Builds the PyO3 wheels. On a v* tag it also publishes to PyPI via Trusted
+# Publishing (OIDC) — no API token is stored in this repo.
+#
+# One-time setup on PyPI: add a "pending publisher" for project `raqeem`,
+# owner `SufficientDaikon`, repo `raqeem`, workflow `python.yml`, environment `pypi`.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  MANIFEST: crates/raqeem-python/Cargo.toml
+
+jobs:
+  build:
+    name: wheel ${{ matrix.platform.runner }} ${{ matrix.platform.target }}
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { runner: ubuntu-latest, target: x86_64 }
+          - { runner: ubuntu-latest, target: aarch64 }
+          - { runner: macos-latest, target: x86_64 }
+          - { runner: macos-latest, target: aarch64 }
+          - { runner: windows-latest, target: x64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # abi3-py39: one wheel per OS/arch serves every CPython >= 3.9.
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist -m ${{ env.MANIFEST }}
+          manylinux: "2014" # Rust needs glibc >= 2.17
+          sccache: "true"
+
+      # Only the native x86_64 Linux wheel can actually run here; the
+      # cross-compiled ones are built but not executable on this runner.
+      - name: Test the wheel (native only)
+        if: matrix.platform.runner == 'ubuntu-latest' && matrix.platform.target == 'x86_64'
+        run: |
+          pip install pytest
+          pip install --no-index --find-links dist raqeem
+          pytest crates/raqeem-python/tests -q
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.platform.runner }}-${{ matrix.platform.target }}
+          path: dist
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist -m ${{ env.MANIFEST }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist
+
+  publish:
+    name: publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

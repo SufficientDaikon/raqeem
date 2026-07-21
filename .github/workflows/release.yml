@@ -23,16 +23,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            name: tafrigh-x86_64-linux
+            name: raqeem-x86_64-linux
           - os: macos-latest
             target: aarch64-apple-darwin
-            name: tafrigh-aarch64-macos
+            name: raqeem-aarch64-macos
           - os: macos-latest
             target: x86_64-apple-darwin
-            name: tafrigh-x86_64-macos
+            name: raqeem-x86_64-macos
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            name: tafrigh-x86_64-windows
+            name: raqeem-x86_64-windows
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -40,15 +40,15 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
 
-      - run: cargo build --release --locked --target ${{ matrix.target }} -p tafrigh-cli
+      - run: cargo build --release --locked --target ${{ matrix.target }} -p raqeem-cli
 
       - name: Package (unix)
         if: runner.os != 'Windows'
-        run: tar -czf ${{ matrix.name }}.tar.gz -C target/${{ matrix.target }}/release tafrigh
+        run: tar -czf ${{ matrix.name }}.tar.gz -C target/${{ matrix.target }}/release raqeem
 
       - name: Package (windows)
         if: runner.os == 'Windows'
-        run: Compress-Archive -Path target/${{ matrix.target }}/release/tafrigh.exe -DestinationPath ${{ matrix.name }}.zip
+        run: Compress-Archive -Path target/${{ matrix.target }}/release/raqeem.exe -DestinationPath ${{ matrix.name }}.zip
 
       - uses: softprops/action-gh-release@v2
         with:

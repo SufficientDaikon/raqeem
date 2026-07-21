@@ -1,15 +1,18 @@
 [workspace]
 resolver = "2"
-members = ["crates/tafrigh-core", "crates/tafrigh-cli"]
+members = ["crates/raqeem-core", "crates/raqeem-cli"]
+# The PyO3 binding is built by maturin, not cargo: keeping it out of the workspace
+# means `cargo test`/`clippy` never need a Python interpreter to link against.
+exclude = ["crates/raqeem-python"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/SufficientDaikon/tafrigh"
+repository = "https://github.com/SufficientDaikon/raqeem"
 authors = ["Ahmed Taha <tahaa755@gmail.com>"]
-description = "تفريغ — an easy, language-agnostic client for Cohere's open Arabic ASR model."
-homepage = "https://github.com/SufficientDaikon/tafrigh"
+description = "رقيم — an easy, language-agnostic client for Cohere's open Arabic ASR model."
+homepage = "https://github.com/SufficientDaikon/raqeem"
 keywords = ["arabic", "asr", "speech-to-text", "transcription", "cohere"]
 categories = ["command-line-utilities", "api-bindings", "multimedia::audio"]
 

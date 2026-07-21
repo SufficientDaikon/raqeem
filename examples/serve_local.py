@@ -1,9 +1,9 @@
-"""Dev-only local model server for tafrigh — NOT part of the lightweight client.
+"""Dev-only local model server for raqeem — NOT part of the lightweight client.
 
 This is the heavy, model-side half (torch). It loads
 `CohereLabs/cohere-transcribe-arabic-07-2026` via transformers and exposes the
 OpenAI-compatible `POST /v1/audio/transcriptions` endpoint that
-`tafrigh --provider openai` talks to. Run this where the model lives; point the
+`raqeem --provider openai` talks to. Run this where the model lives; point the
 tiny Rust client at it.
 
 Runs on **CPU out of the box** (slow but works anywhere, needs ~8-10 GB RAM) and
@@ -19,7 +19,7 @@ Run:
     python serve_local.py                 # serves on http://localhost:8000
 
 Then, from the repo:
-    tafrigh clip.wav --provider openai \
+    raqeem clip.wav --provider openai \
         --endpoint http://localhost:8000/v1/audio/transcriptions --lang ar --format json
 
 Note: follows the model card's documented transformers API. It has not been run

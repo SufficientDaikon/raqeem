@@ -1,18 +1,18 @@
-//! `tafrigh-core` — تفريغ. Turn an audio file into Arabic text by delegating
+//! `raqeem-core` — رقيم. Turn an audio file into Arabic text by delegating
 //! inference to a transcription endpoint (Cohere's hosted API, or your own
 //! vLLM). This crate never loads model weights: it decodes nothing, runs no
 //! model — it POSTs the audio and folds the result. That is what keeps it
 //! light and callable from any language over the CLI.
 //!
 //! ```no_run
-//! use tafrigh_core::{Endpoint, Transcriber};
+//! use raqeem_core::{Endpoint, Transcriber};
 //!
 //! let endpoint = Endpoint::cohere(std::env::var("COHERE_API_KEY").unwrap(), None);
 //! let transcript = Transcriber::new(endpoint)
 //!     .language("ar")
 //!     .transcribe(std::path::Path::new("voice_note.ogg"))?;
 //! println!("{}", transcript.text);
-//! # Ok::<(), tafrigh_core::Error>(())
+//! # Ok::<(), raqeem_core::Error>(())
 //! ```
 
 mod arabic;

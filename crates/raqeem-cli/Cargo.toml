@@ -1,5 +1,5 @@
 [package]
-name = "tafrigh-cli"
+name = "raqeem-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,12 +8,12 @@ authors.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "CLI for tafrigh — transcribe Arabic audio via Cohere's open ASR model."
+description = "CLI for raqeem — transcribe Arabic audio via Cohere's open ASR model."
 
 [[bin]]
-name = "tafrigh"
+name = "raqeem"
 path = "src/main.rs"
 
 [dependencies]
-tafrigh-core = { path = "../tafrigh-core" }
+raqeem-core = { path = "../raqeem-core" }
 clap.workspace = true
