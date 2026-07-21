@@ -43,7 +43,9 @@ jobs:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -m ${{ env.MANIFEST }}
           manylinux: "2014" # Rust needs glibc >= 2.17
-          sccache: "true"
+          # No sccache: wrapping the aarch64 cross-gcc breaks ring's ARM assembly
+          # ("ARM assembler must define __ARM_ARCH" building chacha-armv8-linux64.S).
+          # ring arrives via rustls; a build cache isn't worth a broken target.
 
       # Only the native x86_64 Linux wheel can actually run here; the
       # cross-compiled ones are built but not executable on this runner.
