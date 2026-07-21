@@ -22,6 +22,12 @@ jobs:
   build:
     name: wheel ${{ matrix.platform.runner }} ${{ matrix.platform.target }}
     runs-on: ${{ matrix.platform.runner }}
+    env:
+      # The manylinux2014 aarch64 cross-gcc doesn't define __ARM_ARCH while assembling
+      # ring's .S files, and ring's asm_base.h hard-errors without it. cc-rs only reads
+      # the variable matching the target being built, so this is a no-op elsewhere.
+      # (ring reaches us through rustls, via reqwest.)
+      CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
     strategy:
       fail-fast: false
       matrix:
