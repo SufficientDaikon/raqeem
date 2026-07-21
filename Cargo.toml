@@ -9,6 +9,9 @@ license = "Apache-2.0"
 repository = "https://github.com/SufficientDaikon/tafrigh"
 authors = ["Ahmed Taha <tahaa755@gmail.com>"]
 description = "تفريغ — an easy, language-agnostic client for Cohere's open Arabic ASR model."
+homepage = "https://github.com/SufficientDaikon/tafrigh"
+keywords = ["arabic", "asr", "speech-to-text", "transcription", "cohere"]
+categories = ["command-line-utilities", "api-bindings", "multimedia::audio"]
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }

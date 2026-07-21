@@ -14,7 +14,9 @@ fn posts_multipart_with_auth_and_parses_arabic_text() {
         .match_body(mockito::Matcher::AllOf(vec![
             mockito::Matcher::Regex("cohere-transcribe-arabic".to_string()),
             // Order matters: Cohere requires model + language BEFORE the file part.
-            mockito::Matcher::Regex(r#"(?s)name="model".*name="language".*name="file""#.to_string()),
+            mockito::Matcher::Regex(
+                r#"(?s)name="model".*name="language".*name="file""#.to_string(),
+            ),
         ]))
         .with_status(200)
         .with_header("content-type", "application/json")

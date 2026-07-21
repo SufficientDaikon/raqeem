@@ -17,6 +17,9 @@ vLLM تشغّله بنفسك. الأداة لا تُحمّل أوزان النم
 
 ---
 
+[![CI](https://github.com/SufficientDaikon/tafrigh/actions/workflows/ci.yml/badge.svg)](https://github.com/SufficientDaikon/tafrigh/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 **English:** `tafrigh` is a lightweight client for
 [`CohereLabs/cohere-transcribe-arabic-07-2026`](https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026)
 — the world's most accurate open-source Arabic speech-recognition model (dialects +
@@ -24,33 +27,44 @@ Arabic/English code-switching), Apache-2.0. Give it an audio file, get Arabic te
 the CLI or from any language by shelling out to the binary.
 
 Inference is **always delegated** to an endpoint you choose (Cohere's hosted API, or your
-own vLLM). `tafrigh` loads no weights, so it stays small and fast. It also folds the output
-through Arabic normalization (alef/hamza, taa-marbuta, tatweel + diacritics, Arabic digits →
-ASCII) so downstream parsers get a stable form.
+own vLLM). `tafrigh` loads no weights, so it stays small and fast — a single static binary
+with no runtime. It also folds the output through Arabic normalization (alef/hamza,
+taa-marbuta, tatweel + diacritics, Arabic digits → ASCII) so downstream parsers get a
+stable form.
 
 > Built out of respect for Cohere Labs' work: a genuinely open, Apache-2.0 Arabic ASR model
 > deserves a first-class developer on-ramp. All accuracy credit is theirs — this repo is
 > just the ergonomics around it.
 
-## Install / build
+## Install
+
+**Prebuilt binary** — grab one for Linux / macOS / Windows from
+[Releases](https://github.com/SufficientDaikon/tafrigh/releases). No runtime, no
+dependencies.
+
+**With cargo:**
+
+```bash
+cargo install --git https://github.com/SufficientDaikon/tafrigh tafrigh-cli
+```
+
+**From source:**
 
 ```bash
 git clone https://github.com/SufficientDaikon/tafrigh
-cd tafrigh
-cargo build --release
-# binary at target/release/tafrigh (single static executable, no runtime)
+cd tafrigh && cargo build --release   # binary at target/release/tafrigh
 ```
 
 ## Usage
 
-**Cohere hosted API** (no GPU — just a key from https://dashboard.cohere.com):
+**Cohere hosted API** (no GPU — just a key from [dashboard.cohere.com](https://dashboard.cohere.com/api-keys)):
 
 ```bash
 export COHERE_API_KEY=...          # or pass --api-key
 tafrigh voice_note.ogg --lang ar
 ```
 
-**Your own vLLM** (self-hosted, OpenAI-compatible):
+**Your own vLLM** (self-hosted, OpenAI-compatible — no API key, no rate limits):
 
 ```bash
 # on your GPU box / VPS:
@@ -61,6 +75,9 @@ tafrigh clip.wav \
   --lang ar
 ```
 
+No GPU? [`examples/serve_local.py`](examples/serve_local.py) runs the model on CPU behind
+the same endpoint.
+
 **JSON output** (verbatim + normalized + provenance — this is what programs consume):
 
 ```bash
@@ -69,24 +86,49 @@ tafrigh voice_note.ogg --format json
 
 ```json
 {
-  "text": "الطماطم باتناشر جنيه",
-  "text_normalized": "الطماطم باتناشر جنيه",
+  "text": "الطماطم بـ ١٢٫٥ جنيه",
+  "text_normalized": "الطماطم ب 12.5 جنيه",
   "provider": "cohere",
-  "model": "cohere-transcribe-arabic",
+  "model": "cohere-transcribe-arabic-07-2026",
   "language": "ar"
 }
 ```
+
+`text` is the model verbatim (show this to a human); `text_normalized` is folded for
+matching — note the tatweel stripped and `١٢٫٥` → `12.5` as **one** number, not two.
 
 Call it from anything — e.g. Python:
 
 ```python
 import json, subprocess
 out = subprocess.run(
-    ["tafrigh", "note.ogg", "--provider", "cohere", "--lang", "ar", "--format", "json"],
-    capture_output=True, text=True, check=True,
+    ["tafrigh", "note.ogg", "--lang", "ar", "--format", "json"],
+    capture_output=True, text=True, encoding="utf-8", check=True,
 )
 text = json.loads(out.stdout)["text_normalized"]
 ```
+
+### Options worth knowing
+
+| Flag | Default | Notes |
+|---|---|---|
+| `--model` | `cohere-transcribe-arabic-07-2026` | Cohere needs a **dated** id — undated aliases 404. |
+| `--timeout` | `300` | Seconds, covers upload + inference + download. Raise for slow CPU inference. |
+| `--api-key` | — | Falls back to `$TAFRIGH_API_KEY`. For `--provider cohere` **only**, also `$COHERE_API_KEY` — that Cohere-scoped key is deliberately never sent to a self-hosted `--endpoint`. |
+
+## Status — what's verified, honestly
+
+- **Offline test suite green** (`cargo test`): Arabic normalization units, plus mocked-endpoint
+  tests asserting the multipart shape, field order, bearer auth, and error handling.
+- **The live round-trip is proven** end-to-end against Cohere's real API — audio in, HTTP 200,
+  transcript out. Two real bugs were caught that way and fixed: Cohere requires the `model`
+  and `language` form fields *before* the file part, and it 404s undated model ids.
+- **Not yet verified: a live *Arabic* transcription.** On the trial key available during
+  development, the Arabic model never responds (the request hangs rather than returning 403),
+  while the *same* request on a dated English model returns instantly. The bytes we send are
+  identical either way, so this looks like account/model access rather than a client bug — but
+  it is unproven, and you should know that before trusting it in production. Self-hosting via
+  vLLM sidesteps it entirely.
 
 ## The model (all credit: Cohere Labs)
 
@@ -107,7 +149,7 @@ VAD. Those are `tafrigh`'s roadmap, not the model's job.
 
 ## Supported audio
 
-flac, mp3, mpeg, mpga, ogg, wav. Short clips are sent as-is (no local decode needed).
+flac, mp3, mpeg, mpga, ogg, wav. Clips are sent as-is (no local decode needed).
 
 ## Roadmap
 
@@ -123,7 +165,7 @@ feature you didn't ask for.
 ## Contributing (humans and AI agents)
 
 This repo is built to be extended by AI. See [CONTRIBUTING.md](CONTRIBUTING.md) and
-[`.claude/skills/`](.claude/skills/) — e.g. adding a new backend is a single skill:
+[`.claude/skills/`](.claude/skills/) — adding a new backend is a single skill:
 *"add Deepgram support"* → the agent scaffolds the provider, endpoint, and test.
 
 ## License
