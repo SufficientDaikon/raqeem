@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Verified
+
+- **A live Arabic transcription now works** (2026-07-22) — the gap flagged under 0.1.0's
+  *Known limitations*. Real Arabic speech went through both shipped artifacts (the PyPI wheel
+  and the released binary) to Cohere's hosted API and returned correct Arabic text. The
+  earlier hang did not reproduce, and its cause was never established — so the
+  account-access explanation recorded under 0.1.0 is a guess that no longer holds. Docs
+  only; no code changed.
+
 ## [0.2.1] — 2026-07-22
 
 The first release published to PyPI — `pip install raqeem`. No library or CLI behaviour

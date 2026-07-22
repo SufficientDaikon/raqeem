@@ -142,15 +142,20 @@ the same JSON to stdout.
 
 - **Offline test suite green** (`cargo test`): Arabic normalization units, plus mocked-endpoint
   tests asserting the multipart shape, field order, bearer auth, and error handling.
-- **The live round-trip is proven** end-to-end against Cohere's real API — audio in, HTTP 200,
-  transcript out. Two real bugs were caught that way and fixed: Cohere requires the `model`
-  and `language` form fields *before* the file part, and it 404s undated model ids.
-- **Not yet verified: a live *Arabic* transcription.** On the trial key available during
-  development, the Arabic model never responds (the request hangs rather than returning 403),
-  while the *same* request on a dated English model returns instantly. The bytes we send are
-  identical either way, so this looks like account/model access rather than a client bug — but
-  it is unproven, and you should know that before trusting it in production. Self-hosting via
-  vLLM sidesteps it entirely.
+- **A live Arabic transcription is verified** (2026-07-22), against Cohere's hosted API and
+  through *both* shipped artifacts — the PyPI wheel and the released binary. Real Arabic
+  speech in, correct Arabic text out: a 611 KB narration came back as an accurate paragraph
+  in ~2s, with Arabic-Indic digits (`٢٠٠٣`) folding to ASCII in `text_normalized` as intended.
+  An earlier attempt during development hung; it has not reproduced, and the cause was never
+  established.
+- Two real bugs were caught by live calls and fixed: Cohere requires the `model` and
+  `language` form fields *before* the file part, and it 404s undated model ids.
+- **Not verified: the self-hosted paths.** The `openai` provider (vLLM and friends) and
+  [`examples/serve_local.py`](examples/serve_local.py) are implemented and covered by
+  mocked-endpoint tests, but have never been run against a real self-hosted server. The
+  request they send is the same shape Cohere accepts — treat it as sound but undemonstrated.
+- The accuracy numbers below are **Cohere's**, from the model card. Nothing here benchmarks
+  the model's dialect or code-switching performance.
 
 ## The model (all credit: Cohere Labs)
 
@@ -181,8 +186,8 @@ feature you didn't ask for.
 - Long-form audio: VAD chunking → **subtitles (SRT / VTT)** with real segment timestamps.
 - Optional **speaker diarization** (separate endpoint/module, never a core dep).
 - Optional punctuation / diacritics restoration.
-- Native **bindings** (Python, Node/Bun, WASM) from the one Rust core — the first binding
-  is the flagship demo of the AI-contributor toolkit.
+- More native **bindings** (Node/Bun, WASM) from the one Rust core, the way Python already
+  is — one implementation, no second copy of the logic to drift.
 
 ## Contributing (humans and AI agents)
 
