@@ -60,7 +60,7 @@ Re-export the new consts from `lib.rs` if the CLI needs them.
 
 ## Step 3 — wire the CLI (only if it's a first-class preset)
 
-In `crates/raqeem-cli/src/main.rs`, add a `ProviderArg` variant and map it in `run()`.
+In `crates/raqeem/src/main.rs`, add a `ProviderArg` variant and map it in `run()`.
 If the backend is "just another OpenAI-compatible URL," you can skip this — users reach it
 today with `--provider openai --endpoint <url>`.
 

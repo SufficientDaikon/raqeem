@@ -8,7 +8,7 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- **The crates are published to crates.io** — `cargo install raqeem-cli` and
+- **The crates are published to crates.io** — `cargo install raqeem` and
   `cargo add raqeem-core` now work without the `--git` flag. Nothing about the library or
   CLI changed; this release exists so that all three registries (crates.io, PyPI, GitHub
   Releases) carry the same version.
@@ -16,12 +16,20 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   summary — install, usage, the Python API, the honest status section, and the roadmap.
   Both READMEs link to each other. An Arabic-first tool whose documentation was English-only
   was an odd thing to ship.
-- Per-crate READMEs for `raqeem-core` (library-focused) and `raqeem-cli` (CLI-focused), so
+- Per-crate READMEs for `raqeem-core` (library-focused) and `raqeem` (CLI-focused), so
   each crates.io page reads for the audience that lands on it.
+
+### Changed
+
+- **The CLI crate is named `raqeem`, not `raqeem-cli`** — so the install command matches the
+  binary and matches `pip install raqeem`, and the bare name is held by this project rather
+  than left open. The directory moved to `crates/raqeem/` to match. Nothing user-facing
+  changed: the binary was already `raqeem`, and `raqeem-cli` was never published under that
+  name, so no one can be depending on it.
 
 ### Fixed
 
-- `raqeem-cli` depended on `raqeem-core` **by path only**, which cannot be published — the
+- The CLI crate depended on `raqeem-core` **by path only**, which cannot be published — the
   dependency now carries a version alongside the path.
 
 ### Verified

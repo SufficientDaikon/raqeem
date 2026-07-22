@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/raqeem-core", "crates/raqeem-cli"]
+members = ["crates/raqeem-core", "crates/raqeem"]
 # The PyO3 binding is built by maturin, not cargo: keeping it out of the workspace
 # means `cargo test`/`clippy` never need a Python interpreter to link against.
 exclude = ["crates/raqeem-python"]

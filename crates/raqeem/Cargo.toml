@@ -1,5 +1,5 @@
 [package]
-name = "raqeem-cli"
+name = "raqeem"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,7 +8,7 @@ authors.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "CLI for raqeem — transcribe Arabic audio via Cohere's open ASR model."
+description = "رقيم — transcribe Arabic audio via Cohere's open ASR model, from the CLI or any language."
 readme = "README.md"
 
 [[bin]]

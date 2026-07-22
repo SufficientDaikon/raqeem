@@ -41,6 +41,9 @@ taa-marbuta → haa, tatweel and diacritics stripped, Arabic-Indic and Persian d
 Two things Cohere's API requires, both handled here: the `model` and `language` form fields
 must precede the file part, and the model id must be **dated** (undated aliases 404).
 
+The CLI over this crate is [`raqeem`](https://crates.io/crates/raqeem); the Python wheel is
+`pip install raqeem`.
+
 Full docs, the CLI, and the Python bindings:
 [github.com/SufficientDaikon/raqeem](https://github.com/SufficientDaikon/raqeem).
 

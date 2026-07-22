@@ -39,7 +39,7 @@ crates/raqeem-core/   the library — all logic
   endpoint.rs    Endpoint — the one adapter: url + auth + model
   lib.rs         Transcriber::transcribe — read file → multipart POST → parse → normalize
   output.rs      Transcript → text / json
-crates/raqeem-cli/    the `raqeem` binary — clap args → core (the universal calling surface)
+crates/raqeem/        the `raqeem` binary — clap args → core (the universal calling surface)
 crates/raqeem-python/ PyO3 bindings — `import raqeem`. Deliberately excluded from the cargo
                       workspace so `cargo test`/`clippy` never link libpython; maturin
                       builds it: `maturin develop -m crates/raqeem-python/Cargo.toml`

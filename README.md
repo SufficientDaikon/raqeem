@@ -53,7 +53,7 @@ dependencies.
 **With cargo:**
 
 ```bash
-cargo install --git https://github.com/SufficientDaikon/raqeem raqeem-cli
+cargo install raqeem
 ```
 
 **From source:**

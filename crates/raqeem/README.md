@@ -1,4 +1,4 @@
-# raqeem-cli
+# raqeem
 
 The `raqeem` command (رقيم) — transcribe Arabic audio from the terminal, or from any
 language, using
@@ -6,7 +6,7 @@ language, using
 the most accurate open-source Arabic speech-recognition model, Apache-2.0.
 
 ```bash
-cargo install raqeem-cli
+cargo install raqeem
 ```
 
 A single static binary with no runtime — it loads no model weights. Inference is delegated

@@ -901,7 +901,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "raqeem-cli"
+name = "raqeem"
 version = "0.2.2"
 dependencies = [
  "clap",

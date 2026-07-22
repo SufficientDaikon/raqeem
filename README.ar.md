@@ -44,7 +44,7 @@ pip install raqeem
 </div>
 
 ```bash
-cargo install --git https://github.com/SufficientDaikon/raqeem raqeem-cli
+cargo install raqeem
 ```
 
 <div dir="rtl">
