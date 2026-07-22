@@ -9,6 +9,7 @@ homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Core library for raqeem — an easy client for Cohere's open Arabic ASR model."
+readme = "README.md"
 
 [dependencies]
 serde.workspace = true

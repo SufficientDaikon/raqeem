@@ -6,6 +6,24 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **The crates are published to crates.io** — `cargo install raqeem-cli` and
+  `cargo add raqeem-core` now work without the `--git` flag. Nothing about the library or
+  CLI changed; this release exists so that all three registries (crates.io, PyPI, GitHub
+  Releases) carry the same version.
+- **An Arabic README** ([README.ar.md](README.ar.md)), a full translation rather than a
+  summary — install, usage, the Python API, the honest status section, and the roadmap.
+  Both READMEs link to each other. An Arabic-first tool whose documentation was English-only
+  was an odd thing to ship.
+- Per-crate READMEs for `raqeem-core` (library-focused) and `raqeem-cli` (CLI-focused), so
+  each crates.io page reads for the audience that lands on it.
+
+### Fixed
+
+- `raqeem-cli` depended on `raqeem-core` **by path only**, which cannot be published — the
+  dependency now carries a version alongside the path.
+
 ### Verified
 
 - **A live Arabic transcription now works** (2026-07-22) — the gap flagged under 0.1.0's

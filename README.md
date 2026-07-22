@@ -1,3 +1,5 @@
+**English** · [العربية](README.ar.md)
+
 <div dir="rtl">
 
 # رقيم · raqeem

@@ -9,11 +9,14 @@ homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "CLI for raqeem — transcribe Arabic audio via Cohere's open ASR model."
+readme = "README.md"
 
 [[bin]]
 name = "raqeem"
 path = "src/main.rs"
 
 [dependencies]
-raqeem-core = { path = "../raqeem-core" }
+# The version is what crates.io resolves against; the path is what local builds
+# use. A path-only dependency cannot be published.
+raqeem-core = { path = "../raqeem-core", version = "0.2.2" }
 clap.workspace = true
