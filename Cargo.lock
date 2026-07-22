@@ -902,7 +902,7 @@ dependencies = [
 
 [[package]]
 name = "raqeem-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "raqeem-core",
@@ -910,7 +910,7 @@ dependencies = [
 
 [[package]]
 name = "raqeem-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "mockito",
  "reqwest",

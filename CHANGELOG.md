@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-07-22
+
+The first release published to PyPI — `pip install raqeem`. No library or CLI behaviour
+changed from 0.2.0; this is 0.2.0 plus a wheel pipeline that builds on every target.
+
+### Fixed
+
+- The **aarch64 Linux wheel** failed to build: the manylinux2014 cross-gcc doesn't define
+  `__ARM_ARCH` while assembling `ring`'s pregenerated ARM assembly (`ring` arrives via
+  `rustls`), so `chacha-armv8-linux64.S` hard-errored out of `asm_base.h`. Now defined
+  explicitly, for that target only.
+- Dropped `sccache` from the wheel build — wrapping the cross-compiler interfered with the
+  same assembly step.
+
 ## [0.2.0] — 2026-07-21
 
 ### Changed — the project is renamed `tafrigh` → `raqeem` (رقيم)
@@ -72,5 +86,6 @@ that delegates all inference to an endpoint and never loads model weights.
   appears to be account/model access rather than a client defect — but it is unproven.
 - No timestamps, diarization, VAD, or long-form chunking yet (see the roadmap in the README).
 
+[0.2.1]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.1
 [0.2.0]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.0
 [0.1.0]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.1.0
