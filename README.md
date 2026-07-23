@@ -1,42 +1,78 @@
-**English** · [العربية](README.ar.md)
-
-<div dir="rtl">
+<div align="center">
 
 # رقيم · raqeem
 
-**أسهل طريقة لاستخدام نموذج Cohere المفتوح للتعرّف على الكلام العربي.**
+### World-class Arabic speech-to-text — one line, no GPU, no model weights.
 
-`raqeem` (رقيم) غلافٌ خفيف حول
-[`CohereLabs/cohere-transcribe-arabic-07-2026`](https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026)
-— أدقّ نموذج مفتوح المصدر في العالم للتعرّف على الكلام العربي (لهجات + عربي/إنجليزي مختلط)،
-تحت رخصة Apache 2.0. يأخذ ملفًّا صوتيًّا ويُرجِع نصًّا عربيًّا — من سطر الأوامر أو من أي
-لغة برمجة عبر استدعاء الملف التنفيذي.
+**English** · [العربية](README.ar.md)
 
-الاستدلال (inference) دائمًا عبر نقطة نهاية خارجية — إمّا واجهة Cohere المستضافة، أو خادم
-vLLM تشغّله بنفسك. الأداة لا تُحمّل أوزان النموذج، لذلك تبقى خفيفة وسريعة.
-
-</div>
-
----
-
+[![crates.io](https://img.shields.io/crates/v/raqeem?logo=rust&label=crates.io&color=E43716)](https://crates.io/crates/raqeem)
+[![PyPI](https://img.shields.io/pypi/v/raqeem?logo=pypi&logoColor=white&label=PyPI&color=3775A9)](https://pypi.org/project/raqeem/)
+[![Python](https://img.shields.io/pypi/pyversions/raqeem?logo=python&logoColor=white)](https://pypi.org/project/raqeem/)
 [![CI](https://github.com/SufficientDaikon/raqeem/actions/workflows/ci.yml/badge.svg)](https://github.com/SufficientDaikon/raqeem/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**English:** `raqeem` is a lightweight client for
-[`CohereLabs/cohere-transcribe-arabic-07-2026`](https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026)
-— the world's most accurate open-source Arabic speech-recognition model (dialects +
-Arabic/English code-switching), Apache-2.0. Give it an audio file, get Arabic text — from
-the CLI or from any language by shelling out to the binary.
+</div>
 
-Inference is **always delegated** to an endpoint you choose (Cohere's hosted API, or your
-own vLLM). `raqeem` loads no weights, so it stays small and fast — a single static binary
-with no runtime. It also folds the output through Arabic normalization (alef/hamza,
-taa-marbuta, tatweel + diacritics, Arabic digits → ASCII) so downstream parsers get a
-stable form.
+`raqeem` (رقيم) is the easy way to use
+[`CohereLabs/cohere-transcribe-arabic-07-2026`](https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026)
+— the most accurate **open-source** Arabic speech-recognition model in the world, Apache-2.0.
+Hand it an audio file, get Arabic text back: from Python, from the terminal, or from any
+language at all.
+
+It carries **no model weights**. Inference is delegated to an endpoint you choose — Cohere's
+hosted API, or your own vLLM — so the whole thing is a single small binary (and a compiled
+Python extension) with no `torch`, no CUDA, and nothing to download but the tool itself.
 
 > Built out of respect for Cohere Labs' work: a genuinely open, Apache-2.0 Arabic ASR model
-> deserves a first-class developer on-ramp. All accuracy credit is theirs — this repo is
-> just the ergonomics around it.
+> deserves a first-class developer on-ramp. All accuracy credit is theirs — this repo is just
+> the ergonomics around it.
+
+## Quickstart
+
+```bash
+pip install raqeem
+export COHERE_API_KEY=...          # a free key from dashboard.cohere.com/api-keys
+```
+
+```python
+import raqeem
+
+t = raqeem.transcribe("voice_note.ogg")   # Arabic by default
+print(t.text)                             #  → الطماطم بـ ١٢٫٥ جنيه
+print(t.text_normalized)                  #  → الطماطم ب 12.5 جنيه
+```
+
+Prefer the terminal? Same result, no Python:
+
+```bash
+raqeem voice_note.ogg
+```
+
+That's it. No GPU, no weights, no setup beyond a key.
+
+## Why raqeem
+
+- **The best open Arabic ASR there is.** Cohere's 2B Conformer model tops the Hugging Face
+  Arabic ASR leaderboard — about **11 WER points** better than Whisper Large v3, and strong
+  where Arabic is hardest: dialects (Egyptian, Gulf, Levantine, Maghrebi) and Arabic-English
+  code-switching.
+- **Featherweight by design.** The client loads no weights and runs no model — it POSTs your
+  audio and folds the reply. A static binary, a `torch`-free wheel. Nothing heavy gets pulled
+  in for a feature you didn't ask for.
+- **You choose where inference runs.** Cohere's hosted API when you want zero infrastructure,
+  or your own self-hosted vLLM when you want no rate limits and no data leaving your box —
+  same interface either way.
+- **Two forms of every transcript.** The model's verbatim text *and* an Arabic-normalized
+  form — alef/hamza folded, taa-marbuta and tatweel and diacritics handled, Arabic-Indic
+  digits turned to ASCII. `١٢٫٥` becomes `12.5` as **one** number. That is the difference
+  between a transcript you can read and one a program can parse.
+- **Callable from anything.** Rust core, native Python wheel, and a single binary that prints
+  JSON — so Go, Node, a shell script, or a cron job all drive the exact same engine.
+- **Honest about its limits.** The [status section](#status--what-we-actually-verified) below
+  says plainly what has been run against a live model and what has not.
+- **Built to be extended by AI agents.** Adding a new backend is one skill invocation — see
+  [Contributing](#contributing-humans-and-ai-agents).
 
 ## Install
 
@@ -46,15 +82,14 @@ stable form.
 pip install raqeem
 ```
 
-**Prebuilt binary (CLI)** — grab one for Linux / macOS / Windows from
-[Releases](https://github.com/SufficientDaikon/raqeem/releases). No runtime, no
-dependencies.
-
-**With cargo:**
+**With cargo** — installs the `raqeem` binary:
 
 ```bash
 cargo install raqeem
 ```
+
+**Prebuilt binary** — grab one for Linux / macOS / Windows from
+[Releases](https://github.com/SufficientDaikon/raqeem/releases). No runtime, no dependencies.
 
 **From source:**
 
@@ -140,7 +175,7 @@ the same JSON to stdout.
 | `--timeout` | `300` | Seconds, covers upload + inference + download. Raise for slow CPU inference. |
 | `--api-key` | — | Falls back to `$RAQEEM_API_KEY`. For `--provider cohere` **only**, also `$COHERE_API_KEY` — that Cohere-scoped key is deliberately never sent to a self-hosted `--endpoint`. |
 
-## Status — what's verified, honestly
+## Status — what we actually verified
 
 - **Offline test suite green** (`cargo test`): Arabic normalization units, plus mocked-endpoint
   tests asserting the multipart shape, field order, bearer auth, and error handling.
