@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="264" viewBox="0 0 760 264" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, &quot;Segoe UI&quot;, &quot;Noto Sans Arabic&quot;, Tahoma, sans-serif">
+  <title id="t">متوسط نسبة الخطأ في الكلمات على اختبارات العربي</title>
+  <desc id="d">Cohere Transcribe Arabic 25.87، OmniASR-7B-LLM 28.32، Whisper Large v3 36.86. الأقل أحسن.</desc>
+
+  <rect width="760" height="264" fill="#fcfcfb"/>
+
+  <text x="736" y="34" font-size="17" font-weight="600" text-anchor="start" direction="rtl" fill="#0b0b0b">متوسط نسبة الخطأ في الكلمات على اختبارات العربي</text>
+  <text x="736" y="58" font-size="13" text-anchor="start" direction="rtl" fill="#52514e">نسبة الكلمات اللي الموديل بيغلط في تفريغها (WER).</text>
+
+  <!-- direction cue: shorter bar = better -->
+  <g stroke="#898781" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M520,86 H494"/>
+    <path d="M514,81 L520,86 L514,91"/>
+  </g>
+  <text x="486" y="90" font-size="12" text-anchor="start" direction="rtl" fill="#898781">الأقل أحسن</text>
+
+  <!-- baseline -->
+  <path d="M520,98 V216" stroke="#c3c2b7" stroke-width="1"/>
+
+  <!-- Cohere Transcribe Arabic — 25.87 -->
+  <path d="M520,104 H239.43 A4,4 0 0 0 235.43,108 V124 A4,4 0 0 0 239.43,128 H520 Z" fill="#2a78d6"/>
+  <text x="536" y="120" font-size="13" font-weight="600" fill="#0b0b0b">Cohere Transcribe Arabic</text>
+  <text x="223.43" y="121" font-size="14" font-weight="600" text-anchor="end" fill="#0b0b0b" font-variant-numeric="tabular-nums">25.87</text>
+
+  <!-- OmniASR-7B-LLM — 28.32 -->
+  <path d="M520,146 H212.48 A4,4 0 0 0 208.48,150 V166 A4,4 0 0 0 212.48,170 H520 Z" fill="#898781"/>
+  <text x="536" y="162" font-size="13" fill="#52514e">OmniASR-7B-LLM</text>
+  <text x="196.48" y="163" font-size="14" text-anchor="end" fill="#52514e" font-variant-numeric="tabular-nums">28.32</text>
+
+  <!-- Whisper Large v3 — 36.86 -->
+  <path d="M520,188 H118.54 A4,4 0 0 0 114.54,192 V208 A4,4 0 0 0 118.54,212 H520 Z" fill="#898781"/>
+  <text x="536" y="204" font-size="13" fill="#52514e">Whisper Large v3</text>
+  <text x="102.54" y="205" font-size="14" text-anchor="end" fill="#52514e" font-variant-numeric="tabular-nums">36.86</text>
+
+  <text x="736" y="244" font-size="12" text-anchor="start" direction="rtl" fill="#898781">متوسط على اختبارات العربي. الأرقام منشورة من Cohere Labs.</text>
+</svg>

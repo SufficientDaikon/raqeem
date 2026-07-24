@@ -2,7 +2,7 @@
 
 # رقيم · raqeem
 
-### World-class Arabic speech-to-text — one line, no GPU, no model weights.
+### Arabic speech-to-text without a GPU, PyTorch, or local weights.
 
 **English** · [العربية](README.ar.md)
 
@@ -14,15 +14,13 @@
 
 </div>
 
-`raqeem` (رقيم) is the easy way to use
-[`CohereLabs/cohere-transcribe-arabic-07-2026`](https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026)
-— the most accurate **open-source** Arabic speech-recognition model in the world, Apache-2.0.
-Hand it an audio file, get Arabic text back: from Python, from the terminal, or from any
-language at all.
+`raqeem` is a small client for [`CohereLabs/cohere-transcribe-arabic-07-2026`](https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026),
+Cohere's open Arabic speech-recognition model (Apache-2.0). Hand it an audio file, get Arabic
+text back: from Python, from the terminal, or from any language that can read stdout.
 
-It carries **no model weights**. Inference is delegated to an endpoint you choose — Cohere's
-hosted API, or your own vLLM — so the whole thing is a single small binary (and a compiled
-Python extension) with no `torch`, no CUDA, and nothing to download but the tool itself.
+It carries no model weights. Inference goes to an endpoint you pick — Cohere's hosted API, or
+your own vLLM — so what you install is one small binary, or a compiled Python extension, with no
+`torch`, no CUDA, and nothing to download but the tool itself.
 
 > Built out of respect for Cohere Labs' work: a genuinely open, Apache-2.0 Arabic ASR model
 > deserves a first-class developer on-ramp. All accuracy credit is theirs — this repo is just
@@ -43,36 +41,28 @@ print(t.text)                             #  → الطماطم بـ ١٢٫٥ ج
 print(t.text_normalized)                  #  → الطماطم ب 12.5 جنيه
 ```
 
-Prefer the terminal? Same result, no Python:
+The wheel ships the Python extension only. If you want the `raqeem` command, install the binary:
 
 ```bash
+cargo install raqeem      # or download one from Releases
 raqeem voice_note.ogg
 ```
 
-That's it. No GPU, no weights, no setup beyond a key.
+## What you get
 
-## Why raqeem
-
-- **The best open Arabic ASR there is.** Cohere's 2B Conformer model tops the Hugging Face
-  Arabic ASR leaderboard — about **11 WER points** better than Whisper Large v3, and strong
-  where Arabic is hardest: dialects (Egyptian, Gulf, Levantine, Maghrebi) and Arabic-English
-  code-switching.
-- **Featherweight by design.** The client loads no weights and runs no model — it POSTs your
-  audio and folds the reply. A static binary, a `torch`-free wheel. Nothing heavy gets pulled
-  in for a feature you didn't ask for.
-- **You choose where inference runs.** Cohere's hosted API when you want zero infrastructure,
-  or your own self-hosted vLLM when you want no rate limits and no data leaving your box —
-  same interface either way.
-- **Two forms of every transcript.** The model's verbatim text *and* an Arabic-normalized
-  form — alef/hamza folded, taa-marbuta and tatweel and diacritics handled, Arabic-Indic
-  digits turned to ASCII. `١٢٫٥` becomes `12.5` as **one** number. That is the difference
-  between a transcript you can read and one a program can parse.
-- **Callable from anything.** Rust core, native Python wheel, and a single binary that prints
-  JSON — so Go, Node, a shell script, or a cron job all drive the exact same engine.
-- **Honest about its limits.** The [status section](#status--what-we-actually-verified) below
-  says plainly what has been run against a live model and what has not.
-- **Built to be extended by AI agents.** Adding a new backend is one skill invocation — see
-  [Contributing](#contributing-humans-and-ai-agents).
+- **The best open Arabic ASR there is.** Cohere's 2B Conformer model runs about **11 WER points**
+  ahead of Whisper Large v3, and holds up where Arabic gets hard: dialects (Egyptian, Gulf,
+  Levantine, Maghrebi) and Arabic-English code-switching. [Numbers below](#benchmarks).
+- **Nothing heavy gets installed.** The client loads no weights and runs no model. It POSTs your
+  audio and folds the reply, and that's the entire job — a static binary, a `torch`-free wheel.
+- **You choose where inference runs.** Cohere's hosted API when you want zero infrastructure, or
+  your own vLLM when you want no rate limits and no audio leaving your network. Same interface.
+- **Two forms of every transcript.** The model's verbatim text, plus an Arabic-normalized form:
+  alef/hamza folded, taa-marbuta and tatweel and diacritics handled, Arabic-Indic digits turned
+  to ASCII. `١٢٫٥` becomes `12.5` as **one** number. That's the difference between a transcript
+  you can read and one a program can parse.
+- **Callable from anything.** Rust core, native Python wheel, and a binary that prints JSON — so
+  Go, Node, a shell script, or a cron job all drive the same engine.
 
 ## Install
 
@@ -81,6 +71,9 @@ That's it. No GPU, no weights, no setup beyond a key.
 ```bash
 pip install raqeem
 ```
+
+That gives you `import raqeem`. It does not put a `raqeem` command on your `PATH` — use one of
+the next three for that.
 
 **With cargo** — installs the `raqeem` binary:
 
@@ -100,28 +93,31 @@ cd raqeem && cargo build --release   # binary at target/release/raqeem
 
 ## Usage
 
-**Cohere hosted API** (no GPU — just a key from [dashboard.cohere.com](https://dashboard.cohere.com/api-keys)):
+### Cohere's hosted API
 
 ```bash
-export COHERE_API_KEY=...          # or pass --api-key
+export COHERE_API_KEY=your_api_key
 raqeem voice_note.ogg --lang ar
 ```
 
-**Your own vLLM** (self-hosted, OpenAI-compatible — no API key, no rate limits):
+### Your own vLLM
 
 ```bash
-# on your GPU box / VPS:
-#   vllm serve CohereLabs/cohere-transcribe-arabic-07-2026 --trust-remote-code
+# on the GPU box:
+# vllm serve CohereLabs/cohere-transcribe-arabic-07-2026 --trust-remote-code
+
 raqeem clip.wav \
   --provider openai \
   --endpoint http://localhost:8000/v1/audio/transcriptions \
   --lang ar
 ```
 
-No GPU? [`examples/serve_local.py`](examples/serve_local.py) runs the model on CPU behind
-the same endpoint.
+No GPU anywhere? [`examples/serve_local.py`](examples/serve_local.py) serves the same
+OpenAI-compatible route off the CPU. That script is the heavy half of the deal — it wants
+`torch`, `transformers`, and roughly 8-10 GB of RAM, which is exactly what the client above
+avoids. Run it on the machine that can afford it and point `raqeem` at it.
 
-**JSON output** (verbatim + normalized + provenance — this is what programs consume):
+### JSON output
 
 ```bash
 raqeem voice_note.ogg --format json
@@ -137,67 +133,78 @@ raqeem voice_note.ogg --format json
 }
 ```
 
-`text` is the model verbatim (show this to a human); `text_normalized` is folded for
-matching — note the tatweel stripped and `١٢٫٥` → `12.5` as **one** number, not two.
+That JSON contract is the language-agnostic API: shell out from Python, Node, Go, anything.
+Note that `--provider openai` records `"provider": "openai-compatible"`, not `"openai"` — the
+flag names the preset, the field names the wire format.
 
-## From Python
+### CLI reference
 
-`pip install raqeem` gives you a **native extension** built from this same Rust core —
-no `torch`, no model weights, no subprocess:
+| Flag | Default | Notes |
+|---|---|---|
+| `--provider` | `cohere` | `cohere` or `openai`. The latter needs `--endpoint`. |
+| `--endpoint` | — | Full URL of a self-hosted OpenAI-compatible server. |
+| `--api-key` | — | Falls back to `$RAQEEM_API_KEY`. See the note below. |
+| `--model` | `cohere-transcribe-arabic-07-2026` | Cohere requires a **dated** id; undated aliases return 404. |
+| `--lang` | `ar` | ISO-639-1. |
+| `--timeout` | `300` | Seconds, covering upload + inference + download. Raise it for slow CPU inference. |
+| `--format` | `text` | `text` or `json`. |
+
+The Cohere-scoped `$COHERE_API_KEY` is deliberately **never** sent to a self-hosted `--endpoint`;
+that key belongs to Cohere and has no business on someone else's server. `--api-key` and
+`$RAQEEM_API_KEY` are yours, so they go wherever you point the tool — including a self-hosted
+endpoint that needs auth.
+
+## Python API
+
+Same engine, no subprocess. Keyword arguments mirror the flags above.
 
 ```python
 import raqeem
 
-t = raqeem.transcribe("voice_note.ogg", lang="ar")   # reads $COHERE_API_KEY
+# reads $RAQEEM_API_KEY, then $COHERE_API_KEY
+t = raqeem.transcribe("voice_note.ogg", lang="ar")
 print(t.text)              # verbatim, for humans
 print(t.text_normalized)   # Arabic-folded, for parsing
-print(t.to_dict())
+print(t.to_dict())         # same shape as --format json
 
-# your own vLLM — the Cohere-scoped key is deliberately never sent to a self-hosted endpoint
-raqeem.transcribe("clip.wav", provider="openai",
-                  endpoint="http://localhost:8000/v1/audio/transcriptions")
+# your own vLLM
+t = raqeem.transcribe(
+    "clip.wav",
+    provider="openai",
+    endpoint="http://localhost:8000/v1/audio/transcriptions",
+)
 
+# the Arabic normalizer on its own
 raqeem.normalize_ar("الطماطم بـ ١٢٫٥ جنيه")   # 'الطماطم ب 12.5 جنيه'
 ```
 
-Failures raise `raqeem.TranscriptionError`; a bad provider or a missing key/endpoint
-raises `ValueError`. Type stubs ship with the wheel, so editors autocomplete. One `abi3`
-wheel per OS/arch covers CPython 3.9+.
+Failures raise `raqeem.TranscriptionError`. A bad provider or a missing key/endpoint raises
+`ValueError`.
 
-Any other language can drive the binary directly — `raqeem clip.ogg --format json` prints
-the same JSON to stdout.
+## What's actually been tested
 
-### Options worth knowing
+- **Offline suite.** `cargo test` covers Arabic normalization, the multipart body (including the
+  field ordering Cohere insists on), and error propagation from a mocked HTTP endpoint. No
+  network, no API key, no model. The Python binding re-asserts the same normalization cases so
+  the two implementations can't drift.
+- **Live, against Cohere.** Real audio through both the PyPI wheel and the CLI binary — a 611 KB
+  file came back in about 2 seconds.
+- **Not verified live:** the self-hosted path. `--provider openai` has mock tests against a fake
+  server, but nothing here has talked to a real vLLM cluster. `examples/serve_local.py` has no
+  tests at all and has never been run end-to-end against the live weights; it follows the model
+  card's documented `transformers` API, so if a name shifted in your version it's a small fix.
+- **Known caveats.** Cohere rejects the request unless `model` and `language` come *before* the
+  file part in the multipart body. Undated model aliases return HTTP 404.
 
-| Flag | Default | Notes |
-|---|---|---|
-| `--model` | `cohere-transcribe-arabic-07-2026` | Cohere needs a **dated** id — undated aliases 404. |
-| `--timeout` | `300` | Seconds, covers upload + inference + download. Raise for slow CPU inference. |
-| `--api-key` | — | Falls back to `$RAQEEM_API_KEY`. For `--provider cohere` **only**, also `$COHERE_API_KEY` — that Cohere-scoped key is deliberately never sent to a self-hosted `--endpoint`. |
+## Benchmarks
 
-## Status — what we actually verified
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/wer-dark.svg">
+  <img alt="Average word error rate on Arabic ASR benchmarks. Cohere Transcribe Arabic 25.87, OmniASR-7B-LLM 28.32, Whisper Large v3 36.86. Lower is better." src="assets/wer-light.svg" width="760">
+</picture>
 
-- **Offline test suite green** (`cargo test`): Arabic normalization units, plus mocked-endpoint
-  tests asserting the multipart shape, field order, bearer auth, and error handling.
-- **A live Arabic transcription is verified** (2026-07-22), against Cohere's hosted API and
-  through *both* shipped artifacts — the PyPI wheel and the released binary. Real Arabic
-  speech in, correct Arabic text out: a 611 KB narration came back as an accurate paragraph
-  in ~2s, with Arabic-Indic digits (`٢٠٠٣`) folding to ASCII in `text_normalized` as intended.
-  An earlier attempt during development hung; it has not reproduced, and the cause was never
-  established.
-- Two real bugs were caught by live calls and fixed: Cohere requires the `model` and
-  `language` form fields *before* the file part, and it 404s undated model ids.
-- **Not verified: the self-hosted paths.** The `openai` provider (vLLM and friends) and
-  [`examples/serve_local.py`](examples/serve_local.py) are implemented and covered by
-  mocked-endpoint tests, but have never been run against a real self-hosted server. The
-  request they send is the same shape Cohere accepts — treat it as sound but undemonstrated.
-- The accuracy numbers below are **Cohere's**, from the model card. Nothing here benchmarks
-  the model's dialect or code-switching performance.
-
-## The model (all credit: Cohere Labs)
-
-2B-parameter Conformer encoder + Transformer decoder, Apache-2.0. Best open-source Arabic
-ASR on the Hugging Face Arabic ASR leaderboard.
+<details>
+<summary>Same numbers as text</summary>
 
 | Model | Avg WER ↓ |
 |---|---|
@@ -205,33 +212,31 @@ ASR on the Hugging Face Arabic ASR leaderboard.
 | OmniASR-7B-LLM | 28.32 |
 | Whisper Large v3 | 36.86 |
 
-Also: RTFx ≈ 525 (much faster than Whisper), preferred over Whisper in 95.8% of human
-tests, covers MSA + Egyptian/Gulf/Levantine/Maghrebi + English + code-switching.
+Reported by Cohere Labs.
 
-**What the model gives you:** text only. No timestamps, diarization, language detection, or
-VAD. Those are `raqeem`'s roadmap, not the model's job.
+</details>
 
-## Supported audio
+The model returns plain text and nothing else. Timestamps, speaker diarization, and VAD are
+roadmap items for `raqeem`, not things the model gives us today.
 
-flac, mp3, mpeg, mpga, ogg, wav. Clips are sent as-is (no local decode needed).
+## Audio formats
 
-## Roadmap
+`flac`, `mp3`, `mpeg`, `mpga`, `ogg`, `wav` — that list is the endpoint's, not ours. `raqeem`
+never looks at the extension or decodes anything; it uploads the bytes as they are and lets the
+server decide.
 
-Each item is opt-in and must earn its keep — the core never grows a heavy dependency for a
-feature you didn't ask for.
+## A note on access
 
-- Long-form audio: VAD chunking → **subtitles (SRT / VTT)** with real segment timestamps.
-- Optional **speaker diarization** (separate endpoint/module, never a core dep).
-- Optional punctuation / diacritics restoration.
-- More native **bindings** (Node/Bun, WASM) from the one Rust core, the way Python already
-  is — one implementation, no second copy of the logic to drift.
+The weights are Apache-2.0, but the Hugging Face model page sits behind an access form. You'll
+need to request access to read the card. Nothing in `raqeem` needs it — the hosted API only wants
+a Cohere key — but the link above won't open for you cold.
 
-## Contributing (humans and AI agents)
+## Contributing
 
-This repo is built to be extended by AI. See [CONTRIBUTING.md](CONTRIBUTING.md) and
-[`.claude/skills/`](.claude/skills/) — adding a new backend is a single skill:
-*"add Deepgram support"* → the agent scaffolds the provider, endpoint, and test.
+Issues and PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md), and
+[.claude/skills/](.claude/skills/) if you're adding a transcription backend — there's a skill
+that walks the three edits it takes.
 
 ## License
 
-Apache-2.0 — same as the model. See [LICENSE](LICENSE).
+[Apache-2.0](LICENSE) — same as the model.

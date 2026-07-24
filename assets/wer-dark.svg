@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="264" viewBox="0 0 760 264" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, &quot;Segoe UI&quot;, Roboto, sans-serif">
+  <title id="t">Average word error rate on Arabic ASR benchmarks</title>
+  <desc id="d">Cohere Transcribe Arabic 25.87, OmniASR-7B-LLM 28.32, Whisper Large v3 36.86. Lower is better.</desc>
+
+  <rect width="760" height="264" fill="#1a1a19"/>
+
+  <text x="24" y="34" font-size="17" font-weight="600" fill="#ffffff">Average word error rate, Arabic benchmarks</text>
+  <text x="24" y="58" font-size="13" fill="#c3c2b7">WER = word error rate, the share of words the model gets wrong.</text>
+
+  <!-- direction cue: shorter bar = better -->
+  <g stroke="#898781" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M228,86 H254"/>
+    <path d="M234,81 L228,86 L234,91"/>
+  </g>
+  <text x="262" y="90" font-size="12" fill="#898781">lower is better</text>
+
+  <!-- baseline -->
+  <path d="M228,98 V216" stroke="#383835" stroke-width="1"/>
+
+  <!-- Cohere Transcribe Arabic — 25.87 -->
+  <path d="M228,104 H516.3 A4,4 0 0 1 520.3,108 V124 A4,4 0 0 1 516.3,128 H228 Z" fill="#3987e5"/>
+  <text x="212" y="120" font-size="13" font-weight="600" text-anchor="end" fill="#ffffff">Cohere Transcribe Arabic</text>
+  <text x="532" y="121" font-size="14" font-weight="600" fill="#ffffff" font-variant-numeric="tabular-nums">25.87</text>
+
+  <!-- OmniASR-7B-LLM — 28.32 -->
+  <path d="M228,146 H544 A4,4 0 0 1 548,150 V166 A4,4 0 0 1 544,170 H228 Z" fill="#898781"/>
+  <text x="212" y="162" font-size="13" text-anchor="end" fill="#c3c2b7">OmniASR-7B-LLM</text>
+  <text x="560" y="163" font-size="14" fill="#c3c2b7" font-variant-numeric="tabular-nums">28.32</text>
+
+  <!-- Whisper Large v3 — 36.86 -->
+  <path d="M228,188 H640.5 A4,4 0 0 1 644.5,192 V208 A4,4 0 0 1 640.5,212 H228 Z" fill="#898781"/>
+  <text x="212" y="204" font-size="13" text-anchor="end" fill="#c3c2b7">Whisper Large v3</text>
+  <text x="656.5" y="205" font-size="14" fill="#c3c2b7" font-variant-numeric="tabular-nums">36.86</text>
+
+  <text x="24" y="244" font-size="12" fill="#898781">Averaged across Arabic benchmarks. Reported by Cohere Labs.</text>
+</svg>
