@@ -6,6 +6,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-07-25
+
 ### Added
 
 - **The crates are published to crates.io** — `cargo install raqeem` and
@@ -18,6 +20,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   was an odd thing to ship.
 - Per-crate READMEs for `raqeem-core` (library-focused) and `raqeem` (CLI-focused), so
   each crates.io page reads for the audience that lands on it.
+- A WER comparison chart in both READMEs ([assets/](assets/)) — hand-authored SVG, light and
+  dark variants, RTL for the Arabic page. The bare three-row table said nothing about what WER
+  measures or which direction is good; the chart says both. Same numbers, still Cohere Labs'.
 
 ### Changed
 
@@ -31,6 +36,21 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The CLI crate depended on `raqeem-core` **by path only**, which cannot be published — the
   dependency now carries a version alongside the path.
+- **Four wrong claims on the README landing page**, all of them there since the README rewrite
+  and all now corrected in both languages:
+  - `pip install raqeem` was presented as though it also gave you the `raqeem` command. It
+    doesn't — the wheel is an extension module with no console script. The CLI comes from
+    `cargo install` or a release binary, and the READMEs now say so.
+  - The `--api-key` row claimed API keys are *never* forwarded to self-hosted endpoints. Only
+    the Cohere-scoped `$COHERE_API_KEY` is withheld; `--api-key` and `$RAQEEM_API_KEY` are
+    sent wherever you point the tool. The behaviour was always right — the docs weren't.
+  - `examples/serve_local.py` was listed as "unit tested via mocks". It has no tests at all
+    and has never been run end to end.
+  - `--provider openai` records `"provider": "openai-compatible"` in JSON output, which the
+    options table never mentioned.
+- Two typos in the Arabic README that changed meaning: the verification heading read
+  الاختيارات (choices) instead of الاختبارات (tests), and المحكلي for المحلي. The Arabic page
+  had also silently dropped the "undated aliases 404" caveat the English one carried.
 
 ### Verified
 
@@ -123,6 +143,7 @@ that delegates all inference to an endpoint and never loads model weights.
   appears to be account/model access rather than a client defect — but it is unproven.
 - No timestamps, diarization, VAD, or long-form chunking yet (see the roadmap in the README).
 
+[0.2.2]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.2
 [0.2.1]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.1
 [0.2.0]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.0
 [0.1.0]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.1.0
