@@ -108,6 +108,22 @@ mod tests {
         }
     }
 
+    /// And the complement, which is the direction that fails silently: a new variant with
+    /// no entry in `ACCEPTED_NAMES` compiles, passes every other test, and is simply
+    /// never offered to a user who typos the provider name.
+    #[test]
+    fn every_variant_is_reachable_by_an_advertised_name() {
+        for &p in Provider::ALL {
+            let reachable = Provider::ACCEPTED_NAMES
+                .iter()
+                .any(|n| n.parse::<Provider>() == Ok(p));
+            assert!(
+                reachable,
+                "{p} has no entry in ACCEPTED_NAMES, so no documented spelling reaches it"
+            );
+        }
+    }
+
     #[test]
     fn an_unknown_name_lists_the_names_users_actually_type() {
         let err = "nope".parse::<Provider>().unwrap_err();

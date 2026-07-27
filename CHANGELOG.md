@@ -28,6 +28,14 @@ that field, re-run anything you have cached.
   (`crates/raqeem-core/tests/vectors/normalize_ar.json`), so a case added once is a case
   both languages must satisfy.
 
+- **The ASCII separators U+001C–001F were not collapsed as whitespace.** The reference
+  finishes with `re.sub(r"\s+", " ", …)`, and Python's `\s` matches those four where
+  Rust's `char::is_whitespace` does not, so they survived into the output. Older than the
+  bug above and unrelated to it. Found by sweeping every plausible codepoint against the
+  reference rather than by picking test cases — which is also the evidence for the parity
+  claim now: 6,912 probes across ASCII, Latin-1, the Arabic blocks, General Punctuation
+  and both Presentation Forms ranges, zero divergence.
+
 - **`Transcriber::with_timeout` turned a recoverable error into a panic.** It fell back to
   `Client::new()` when the builder failed — a constructor that panics on the very same
   failure. Had it ever succeeded it would have installed reqwest's default 30s timeout,

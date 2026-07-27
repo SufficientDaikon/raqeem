@@ -19,8 +19,13 @@ raqeem your_clip.ogg --lang ar --format json
 raqeem your_clip.wav \
   --provider openai \
   --endpoint http://localhost:8000/v1/audio/transcriptions \
+  --model CohereLabs/cohere-transcribe-arabic-07-2026 \
   --lang ar --format json
 ```
+
+`--model` is required with `--provider openai`: your server names its own models, so
+raqeem will not guess one for you. `serve_local.py` below serves a single model and
+ignores the field, but vLLM matches it against what it loaded.
 
 ## Run the model locally (dev, no cloud)
 

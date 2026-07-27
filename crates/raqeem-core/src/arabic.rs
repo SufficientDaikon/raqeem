@@ -20,6 +20,18 @@
 //! lower-cases a word-final Greek `Σ` to `ς`, Rust to `σ`. Out of domain for Arabic
 //! transcripts, and scout re-normalizes through the Python function downstream anyway.
 
+/// What the reference collapses into a single space.
+///
+/// The reference's final step is `re.sub(r"\s+", " ", …)`, and Python's `\s` is **not**
+/// `char::is_whitespace`: it additionally matches the ASCII separators U+001C–001F
+/// (file / group / record / unit), which carry no Unicode `White_Space` property. Using
+/// `is_whitespace` alone left those four passing through where the reference removed
+/// them. Vanishingly rare in a transcript, but "identical output" is either true or it
+/// isn't, and an exhaustive sweep against the reference is what surfaced it.
+fn is_separator(ch: char) -> bool {
+    ch.is_whitespace() || matches!(ch, '\u{001C}'..='\u{001F}')
+}
+
 /// Fold Arabic text to a matching-stable form. Idempotent; ASCII passes through
 /// lower-cased, so it is safe to run unconditionally on any transcript.
 pub fn normalize_ar(text: &str) -> String {
@@ -59,7 +71,7 @@ pub fn normalize_ar(text: &str) -> String {
             _ => {}
         }
 
-        if ch.is_whitespace() {
+        if is_separator(ch) {
             // Leading whitespace never becomes a pending space, so the result is trimmed.
             pending_space = !out.is_empty();
             continue;
@@ -200,8 +212,18 @@ mod tests {
         out.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
-    /// Is this character one the new `_FORMAT_STRIP` arm deliberately removes?
-    fn is_newly_stripped(c: char) -> bool {
+    /// Characters this release deliberately changed the handling of, so the equivalence
+    /// sweep must skip them: the `_FORMAT_STRIP` set that the port was missing, and the
+    /// four ASCII separators that Python's `\s` collapses but `char::is_whitespace`
+    /// does not.
+    fn is_deliberately_changed(c: char) -> bool {
+        matches!(c,
+            '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}')
+            || matches!(c, '\u{001C}'..='\u{001F}')
+    }
+
+    /// Is this one of the invisible controls the new `_FORMAT_STRIP` arm removes?
+    fn is_format_control(c: char) -> bool {
         matches!(c,
             '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}')
     }
@@ -225,7 +247,7 @@ mod tests {
                 let Some(c) = char::from_u32(cp) else {
                     continue;
                 };
-                if is_newly_stripped(c) {
+                if is_deliberately_changed(c) {
                     continue;
                 }
                 // Bare, and wrapped in context so whitespace handling is exercised too.
@@ -245,12 +267,12 @@ mod tests {
     }
 
     #[test]
-    fn the_only_deliberate_divergence_is_the_stripped_controls() {
+    fn every_format_control_is_stripped_and_was_not_already() {
         for cp in 0x0000u32..=0x2FFF {
             let Some(c) = char::from_u32(cp) else {
                 continue;
             };
-            if !is_newly_stripped(c) {
+            if !is_format_control(c) {
                 continue;
             }
             let probe = format!("طم{c}طم");
@@ -260,6 +282,25 @@ mod tests {
                 "طمطم",
                 "U+{cp:04X} was already handled; it does not belong in the new arm"
             );
+        }
+    }
+
+    /// The reference's `re.sub(r"\s+", " ", …)` treats these as whitespace; Rust's
+    /// `char::is_whitespace` does not. Found by sweeping every codepoint against the
+    /// reference rather than by picking cases — the vector file would never have
+    /// contained a record separator.
+    #[test]
+    fn the_ascii_separators_collapse_like_whitespace() {
+        for c in ['\u{001C}', '\u{001D}', '\u{001E}', '\u{001F}'] {
+            assert_eq!(
+                normalize_ar(&c.to_string()),
+                "",
+                "U+{:04X} survived",
+                c as u32
+            );
+            assert_eq!(normalize_ar(&format!("طم{c}طم")), "طم طم");
+            assert_eq!(normalize_ar(&format!("طم {c} طم")), "طم طم");
+            assert_eq!(normalize_ar(&format!("{c}طم{c}")), "طم");
         }
     }
 }

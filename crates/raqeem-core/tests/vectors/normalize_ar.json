@@ -158,5 +158,30 @@
     "input": "‫الأسعار‏: ٥٠٫٥ جنيهًا‬",
     "expected": "الاسعار: 50.5 جنيها",
     "note": "a realistic scraped price line: bidi embedding, RLM, hamza, arabic decimal, tanween"
+  },
+  {
+    "input": "طم\u001cطم",
+    "expected": "طم طم",
+    "note": "ASCII file separator collapses like whitespace"
+  },
+  {
+    "input": "طم\u001dطم",
+    "expected": "طم طم",
+    "note": "ASCII group separator collapses like whitespace"
+  },
+  {
+    "input": "طم\u001eطم",
+    "expected": "طم طم",
+    "note": "ASCII record separator collapses like whitespace"
+  },
+  {
+    "input": "طم\u001fطم",
+    "expected": "طم طم",
+    "note": "ASCII unit separator collapses like whitespace"
+  },
+  {
+    "input": "\u001fطماطة\u001c",
+    "expected": "طماطه",
+    "note": "ASCII separators trim like whitespace"
   }
 ]

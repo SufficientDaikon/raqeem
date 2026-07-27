@@ -20,7 +20,12 @@ Run:
 
 Then, from the repo:
     raqeem clip.wav --provider openai \
-        --endpoint http://localhost:8000/v1/audio/transcriptions --lang ar --format json
+        --endpoint http://localhost:8000/v1/audio/transcriptions \
+        --model CohereLabs/cohere-transcribe-arabic-07-2026 \
+        --lang ar --format json
+
+(`--model` is required with `--provider openai`. This server serves one model and ignores
+the field, but raqeem will not invent a model id for a server it knows nothing about.)
 
 Note: follows the model card's documented transformers API. It has not been run
 end-to-end against the live weights from here, so if an API name shifted in your
