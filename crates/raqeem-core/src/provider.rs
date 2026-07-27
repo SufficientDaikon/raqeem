@@ -25,6 +25,15 @@ impl Provider {
 
     /// Every variant, so callers can enumerate the backends without matching by hand.
     pub const ALL: &'static [Provider] = &[Provider::Cohere, Provider::OpenAiCompatible];
+
+    /// The spellings [`FromStr`](std::str::FromStr) accepts, as the CLI and the Python
+    /// API document them.
+    ///
+    /// Deliberately not derived from [`as_str`](Self::as_str): that returns the
+    /// provenance tag written onto a transcript, and for the self-hosted backend the tag
+    /// (`openai-compatible`) is not what a user types (`openai`). Error messages have to
+    /// come from here, or they tell people to pass a name the docs never mention.
+    pub const ACCEPTED_NAMES: &'static [&'static str] = &["cohere", "openai"];
 }
 
 impl std::fmt::Display for Provider {
@@ -40,11 +49,11 @@ pub struct UnknownProvider(pub String);
 impl std::fmt::Display for UnknownProvider {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "unknown provider {:?} (expected one of: ", self.0)?;
-        for (i, p) in Provider::ALL.iter().enumerate() {
+        for (i, name) in Provider::ACCEPTED_NAMES.iter().enumerate() {
             if i > 0 {
                 f.write_str(", ")?;
             }
-            write!(f, "{p}")?;
+            write!(f, "{name}")?;
         }
         f.write_str(")")
     }
@@ -87,11 +96,27 @@ mod tests {
         assert_eq!("openai".parse::<Provider>(), Ok(Provider::OpenAiCompatible));
     }
 
+    /// Every name we advertise must actually parse, or the error message sends people in
+    /// a circle.
     #[test]
-    fn an_unknown_name_lists_the_valid_ones() {
+    fn every_advertised_name_parses() {
+        for name in Provider::ACCEPTED_NAMES {
+            assert!(
+                name.parse::<Provider>().is_ok(),
+                "advertised {name:?} but it does not parse"
+            );
+        }
+    }
+
+    #[test]
+    fn an_unknown_name_lists_the_names_users_actually_type() {
         let err = "nope".parse::<Provider>().unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("nope"), "{msg}");
         assert!(msg.contains("cohere"), "{msg}");
+        // 'openai' is the documented spelling; 'openai-compatible' is the transcript tag
+        // and must not be what we tell a user to type.
+        assert!(msg.contains("openai"), "{msg}");
+        assert!(!msg.contains("openai-compatible"), "{msg}");
     }
 }
