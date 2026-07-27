@@ -25,10 +25,16 @@ struct Cli {
     #[arg(long, value_enum, default_value_t = ProviderArg::Cohere)]
     provider: ProviderArg,
 
-    /// API key. Falls back to $RAQEEM_API_KEY. For `--provider cohere` only, it
-    /// also falls back to $COHERE_API_KEY — that Cohere-scoped key is never sent to
-    /// a self-hosted `--endpoint`.
-    #[arg(long, env = "RAQEEM_API_KEY")]
+    /// API key. Prefer $RAQEEM_API_KEY over this flag: an argument is visible to
+    /// every other process on the machine (`ps`, /proc/<pid>/cmdline) and lands in
+    /// shell history. For `--provider cohere` only, it also falls back to
+    /// $COHERE_API_KEY — that Cohere-scoped key is never sent to a self-hosted
+    /// `--endpoint`.
+    //
+    // hide_env_values is not optional here: clap defaults it to false, which renders
+    // the *value* of a set env var into --help. That printed the live API key to
+    // anyone who pasted help output into a CI log or an issue.
+    #[arg(long, env = "RAQEEM_API_KEY", hide_env_values = true)]
     api_key: Option<String>,
 
     /// Full endpoint URL for a self-hosted OpenAI-compatible server, e.g.
