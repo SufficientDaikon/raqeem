@@ -6,6 +6,19 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.3] — 2026-07-27
+
+Metadata only. No library, CLI, or binding behaviour changed from 0.2.2 — this release exists
+to get corrected package metadata onto PyPI, since a published version's metadata is immutable.
+
+### Fixed
+
+- The PyPI package declared no `Programming Language :: Python :: 3.x` classifiers, so the
+  README's Python badge rendered a red **missing** — shields.io reads those classifiers and
+  ignores `requires-python`, which was set correctly the whole time. Classifiers for 3.9
+  through 3.13 added; the badge can only pick them up from a release that uploads new
+  metadata, since PyPI won't let a published version's metadata be edited.
+
 ## [0.2.2] — 2026-07-25
 
 ### Added
@@ -143,6 +156,7 @@ that delegates all inference to an endpoint and never loads model weights.
   appears to be account/model access rather than a client defect — but it is unproven.
 - No timestamps, diarization, VAD, or long-form chunking yet (see the roadmap in the README).
 
+[0.2.3]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.3
 [0.2.2]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.2
 [0.2.1]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.1
 [0.2.0]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.0
