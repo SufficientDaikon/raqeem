@@ -6,6 +6,12 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Python 3.14 declared in the classifiers. The `cp39-abi3` wheel already loads on it and
+  `requires-python` has no upper bound, so 0.2.3's list stopping at 3.13 made the badge read
+  as if the current Python line were unsupported. Reaches PyPI with the next release.
+
 ## [0.2.3] — 2026-07-27
 
 Metadata only. No library, CLI, or binding behaviour changed from 0.2.2 — this release exists
