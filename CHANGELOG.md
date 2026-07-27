@@ -6,6 +6,71 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-28
+
+A hardening pass over the whole client. The headline is a normalization bug that made
+`text_normalized` silently wrong for text carrying invisible characters — if you match on
+that field, re-run anything you have cached.
+
+### Fixed
+
+- **`normalize_ar` was missing an entire pass, so invisible characters survived it.**
+  Zero-width space and joiners, the bidi marks, embeddings, overrides and isolates, and
+  the BOM (`U+200B–200F`, `U+202A–202E`, `U+2066–2069`, `U+FEFF`) all passed through
+  untouched. None of them render, so two strings that look identical compared unequal —
+  exactly the failure `text_normalized` exists to prevent, and RTL text pasted out of a
+  chat app or scraped off a page carries these routinely.
+
+  raqeem's `normalize_ar` is a port of scout's, and the port was faithful when written;
+  the reference added this pass and the port didn't follow. The two test suites had
+  listed their cases separately by hand, which is why neither noticed. They now read
+  **shared vectors** generated from the reference
+  (`crates/raqeem-core/tests/vectors/normalize_ar.json`), so a case added once is a case
+  both languages must satisfy.
+
+- **`Transcriber::with_timeout` turned a recoverable error into a panic.** It fell back to
+  `Client::new()` when the builder failed — a constructor that panics on the very same
+  failure. Had it ever succeeded it would have installed reqwest's default 30s timeout,
+  silently truncating the slow inference the parameter exists to allow.
+
+- **`--endpoint` was accepted and ignored under `--provider cohere`**, so a request meant
+  for your own server went to Cohere's hosted API, with your key. It is now rejected.
+
+- **A broken pipe panicked.** `raqeem clip.wav | head -1` died with `failed printing to
+  stdout`. It now exits cleanly, as a CLI in a pipeline should.
+
+- **The release workflow could publish a release with a platform's binary missing.** Each
+  job listed both a `.tar.gz` and a `.zip` with `fail_on_unmatched_files` disabled to
+  tolerate the one it never built — which also tolerated the one it should have.
+
+### Changed
+
+- **Breaking: `Transcriber::new` and `Transcriber::with_timeout` return `Result`.** They
+  can no longer paper over a client that failed to build. Add `?`.
+- **Breaking: `--provider openai` now requires `--model`** (and `model=` in Python).
+  It used to default to Cohere's dated model id, which a self-hosted server has no reason
+  to recognise; the result was a confusing failure at the server rather than a clear one
+  here.
+- **Breaking: `Error` gained a `Client` variant and is now `#[non_exhaustive]`.** Matches
+  on it need a `_` arm. The upside is that the next variant won't be a breaking change.
+- The audio file is **streamed** to the endpoint instead of being read into memory first.
+  Peak memory no longer scales with the length of the recording. Note that a disk error
+  *during* the upload now surfaces as a transport error rather than `Error::ReadFile`.
+- Error messages no longer paste an entire response body into the terminal — bodies are
+  excerpted at 512 bytes — and no longer print the endpoint URL twice, which mattered
+  because a URL can carry credentials in its userinfo.
+- Credential resolution moved into `raqeem-core` (`resolve_api_key`). The CLI and the
+  Python binding had each implemented the "a Cohere key never reaches a self-hosted
+  endpoint" rule separately, kept in step by hand and by a comment promising they matched.
+- `--timeout` rejects `0` and anything above 24 hours instead of accepting it.
+- Release builds are LTO'd, single-codegen-unit, and stripped.
+
+### Added
+
+- `Provider` implements `FromStr` and `Display`, so backend names parse in one place.
+- An MSRV (`rust-version = "1.82"`), so an old toolchain gets a clear message.
+- `cargo audit` runs in CI, and `cargo test`/`clippy` now run `--locked`.
+
 ## [0.2.4] — 2026-07-28
 
 Security release. If you have ever run `raqeem --help` with `$RAQEEM_API_KEY` set and shared
@@ -184,6 +249,7 @@ that delegates all inference to an endpoint and never loads model weights.
   appears to be account/model access rather than a client defect — but it is unproven.
 - No timestamps, diarization, VAD, or long-form chunking yet (see the roadmap in the README).
 
+[0.3.0]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.3.0
 [0.2.4]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.4
 [0.2.3]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.3
 [0.2.2]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.2

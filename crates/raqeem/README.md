@@ -23,6 +23,7 @@ Your own vLLM, no key and no rate limits:
 raqeem clip.wav \
   --provider openai \
   --endpoint http://localhost:8000/v1/audio/transcriptions \
+  --model CohereLabs/cohere-transcribe-arabic-07-2026 \
   --lang ar
 ```
 

@@ -2,7 +2,19 @@
 //! network, no API key, no model. Asserts the multipart body carries the fields
 //! every backend expects and that an Arabic response parses + normalizes.
 
-use raqeem_core::{Endpoint, Transcriber};
+use std::io::Write;
+
+use raqeem_core::{Endpoint, Error, Transcriber};
+
+/// A throwaway audio file that removes itself, including when a test panics.
+/// `TempDir` gives each call its own directory, so concurrent runs can't collide.
+fn fake_clip(bytes: &[u8]) -> (tempfile::TempDir, std::path::PathBuf) {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("clip.wav");
+    let mut f = std::fs::File::create(&path).expect("write clip");
+    f.write_all(bytes).expect("write clip");
+    (dir, path)
+}
 
 #[test]
 fn posts_multipart_with_auth_and_parses_arabic_text() {
@@ -28,10 +40,10 @@ fn posts_multipart_with_auth_and_parses_arabic_text() {
     let endpoint =
         Endpoint::openai_compatible(url, "cohere-transcribe-arabic", Some("testkey".into()));
 
-    let audio = std::env::temp_dir().join("RAQEEM_test_clip.wav");
-    std::fs::write(&audio, b"RIFF....WAVEfake").unwrap();
+    let (_dir, audio) = fake_clip(b"RIFF....WAVEfake");
 
     let t = Transcriber::new(endpoint)
+        .expect("client builds")
         .language("ar")
         .transcribe(&audio)
         .expect("transcribe should succeed against the mock");
@@ -43,7 +55,37 @@ fn posts_multipart_with_auth_and_parses_arabic_text() {
     assert_eq!(t.provider, "openai-compatible");
 
     mock.assert();
-    let _ = std::fs::remove_file(&audio);
+}
+
+/// The upload streams from the file handle rather than a buffered `Vec`. It must still
+/// send a `Content-Length` body — `Part::reader` without a length would switch reqwest to
+/// chunked transfer-encoding, which not every endpoint accepts.
+#[test]
+fn streams_the_file_with_a_content_length_not_chunked() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("POST", "/v1/audio/transcriptions")
+        .match_header("transfer-encoding", mockito::Matcher::Missing)
+        .match_header("content-length", mockito::Matcher::Any)
+        .match_body(mockito::Matcher::Regex(
+            r#"(?s)name="file".*RIFFSTREAMINGPAYLOAD"#.to_string(),
+        ))
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"text": "تم"}"#)
+        .create();
+
+    let url = format!("{}/v1/audio/transcriptions", server.url());
+    let endpoint = Endpoint::openai_compatible(url, "m", None);
+    let (_dir, audio) = fake_clip(b"RIFFSTREAMINGPAYLOAD");
+
+    let t = Transcriber::new(endpoint)
+        .expect("client builds")
+        .transcribe(&audio)
+        .expect("transcribe should succeed");
+
+    assert_eq!(t.text, "تم");
+    mock.assert();
 }
 
 #[test]
@@ -57,12 +99,83 @@ fn surfaces_api_errors_with_status_and_body() {
 
     let url = format!("{}/v1/audio/transcriptions", server.url());
     let endpoint = Endpoint::openai_compatible(url, "m", None);
+    let (_dir, audio) = fake_clip(b"x");
 
-    let audio = std::env::temp_dir().join("RAQEEM_test_clip2.wav");
-    std::fs::write(&audio, b"x").unwrap();
+    let err = Transcriber::new(endpoint)
+        .expect("client builds")
+        .transcribe(&audio)
+        .unwrap_err();
 
-    let err = Transcriber::new(endpoint).transcribe(&audio).unwrap_err();
+    assert!(matches!(err, Error::Api { status: 401, .. }), "{err:?}");
     let msg = err.to_string();
     assert!(msg.contains("401"), "expected status in error, got: {msg}");
-    let _ = std::fs::remove_file(&audio);
+    assert!(msg.contains("unauthorized"), "expected body, got: {msg}");
+}
+
+/// A huge error body must not be pasted into the terminal wholesale.
+#[test]
+fn truncates_a_giant_error_body() {
+    let mut server = mockito::Server::new();
+    let _mock = server
+        .mock("POST", "/v1/audio/transcriptions")
+        .with_status(500)
+        .with_body("E".repeat(100_000))
+        .create();
+
+    let url = format!("{}/v1/audio/transcriptions", server.url());
+    let endpoint = Endpoint::openai_compatible(url, "m", None);
+    let (_dir, audio) = fake_clip(b"x");
+
+    let err = Transcriber::new(endpoint)
+        .expect("client builds")
+        .transcribe(&audio)
+        .unwrap_err();
+
+    let msg = err.to_string();
+    assert!(
+        msg.len() < 2_000,
+        "error body not truncated: {} chars",
+        msg.len()
+    );
+    assert!(msg.contains("bytes total"), "{msg}");
+}
+
+/// A 200 whose body isn't a transcript is a distinct failure from an HTTP error, and the
+/// body has to reach the user or the mismatch is undiagnosable.
+#[test]
+fn a_success_without_a_text_field_is_a_bad_response() {
+    let mut server = mockito::Server::new();
+    let _mock = server
+        .mock("POST", "/v1/audio/transcriptions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"result": {"transcript": "nested somewhere else"}}"#)
+        .create();
+
+    let url = format!("{}/v1/audio/transcriptions", server.url());
+    let endpoint = Endpoint::openai_compatible(url, "m", None);
+    let (_dir, audio) = fake_clip(b"x");
+
+    let err = Transcriber::new(endpoint)
+        .expect("client builds")
+        .transcribe(&audio)
+        .unwrap_err();
+
+    assert!(matches!(err, Error::BadResponse { .. }), "{err:?}");
+    assert!(
+        err.to_string().contains("nested somewhere else"),
+        "the raw body is what makes this diagnosable: {err}"
+    );
+}
+
+#[test]
+fn a_missing_audio_file_names_the_path() {
+    let endpoint = Endpoint::openai_compatible("http://127.0.0.1:9/v1", "m", None);
+    let err = Transcriber::new(endpoint)
+        .expect("client builds")
+        .transcribe(std::path::Path::new("definitely-not-here.wav"))
+        .unwrap_err();
+
+    assert!(matches!(err, Error::ReadFile { .. }), "{err:?}");
+    assert!(err.to_string().contains("definitely-not-here.wav"), "{err}");
 }

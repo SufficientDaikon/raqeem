@@ -10,7 +10,9 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use raqeem_core::{Endpoint, Transcriber, DEFAULT_COHERE_MODEL, DEFAULT_TIMEOUT_SECS};
+use raqeem_core::{
+    resolve_api_key, Endpoint, Provider, Transcriber, UnknownProvider, DEFAULT_TIMEOUT_SECS,
+};
 
 pyo3::create_exception!(
     raqeem,
@@ -59,43 +61,54 @@ impl Transcript {
     }
 }
 
-/// Build the endpoint, mirroring the CLI's credential rules exactly.
+/// Build the endpoint.
 ///
-/// The Cohere-scoped `$COHERE_API_KEY` is a fallback for the `cohere` provider
-/// **only** — a self-hosted endpoint must never receive it, or that key leaks to a
-/// third-party server. `$RAQEEM_API_KEY` is ours, so it applies to either.
+/// Which key each backend may be given is decided by [`resolve_api_key`] in
+/// `raqeem-core`, not here. This function used to re-implement that rule and carried a
+/// comment promising it "mirrored the CLI's credential rules exactly" — two copies of a
+/// security rule, kept in step by hand. Reading the environment stays on this side,
+/// because the core function is deliberately pure.
 fn build_endpoint(
     provider: &str,
     api_key: Option<String>,
     endpoint: Option<String>,
     model: Option<String>,
 ) -> PyResult<Endpoint> {
+    let provider: Provider = provider
+        .parse()
+        .map_err(|e: UnknownProvider| PyValueError::new_err(e.to_string()))?;
+
+    // `$RAQEEM_API_KEY` is ours, so it counts as an explicit key for any backend;
+    // `$COHERE_API_KEY` is Cohere's, and resolve_api_key is what keeps it there.
     let explicit = api_key.or_else(|| std::env::var("RAQEEM_API_KEY").ok());
+    let key = resolve_api_key(provider, explicit, std::env::var("COHERE_API_KEY").ok());
+
     match provider {
-        "cohere" => {
-            let key = explicit
-                .or_else(|| std::env::var("COHERE_API_KEY").ok())
-                .ok_or_else(|| {
-                    PyValueError::new_err(
-                        "provider='cohere' needs an API key (pass api_key=..., \
-                         or set $RAQEEM_API_KEY / $COHERE_API_KEY)",
-                    )
-                })?;
+        Provider::Cohere => {
+            let key = key.ok_or_else(|| {
+                PyValueError::new_err(
+                    "provider='cohere' needs an API key (pass api_key=..., \
+                     or set $RAQEEM_API_KEY / $COHERE_API_KEY)",
+                )
+            })?;
             Ok(Endpoint::cohere(key, model))
         }
-        "openai" => {
+        Provider::OpenAiCompatible => {
             let url = endpoint.ok_or_else(|| {
                 PyValueError::new_err(
                     "provider='openai' needs endpoint=\
                      'http://host:8000/v1/audio/transcriptions'",
                 )
             })?;
-            let model = model.unwrap_or_else(|| DEFAULT_COHERE_MODEL.to_string());
-            Ok(Endpoint::openai_compatible(url, model, explicit))
+            // Not defaulting to Cohere's model id: your server has its own, and sending
+            // Cohere's just fails at the server with a confusing error.
+            let model = model.ok_or_else(|| {
+                PyValueError::new_err(
+                    "provider='openai' needs model='...' (your server's model name)",
+                )
+            })?;
+            Ok(Endpoint::openai_compatible(url, model, key))
         }
-        other => Err(PyValueError::new_err(format!(
-            "unknown provider {other:?} (expected 'cohere' or 'openai')"
-        ))),
     }
 }
 
@@ -124,7 +137,9 @@ fn transcribe(
 ) -> PyResult<Transcript> {
     let ep = build_endpoint(provider, api_key, endpoint, model)?;
     let secs = timeout.unwrap_or(DEFAULT_TIMEOUT_SECS);
-    let transcriber = Transcriber::with_timeout(ep, Duration::from_secs(secs)).language(lang);
+    let transcriber = Transcriber::with_timeout(ep, Duration::from_secs(secs))
+        .map_err(|e| TranscriptionError::new_err(e.to_string()))?
+        .language(lang);
 
     // Detach from the interpreter (release the GIL) for the blocking round-trip:
     // upload + inference + download can take minutes, and holding on would freeze

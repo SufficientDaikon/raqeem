@@ -29,6 +29,7 @@ t = raqeem.transcribe(
     "clip.wav",
     provider="openai",
     endpoint="http://localhost:8000/v1/audio/transcriptions",
+    model="CohereLabs/cohere-transcribe-arabic-07-2026",
 )
 
 # the Arabic normalizer on its own

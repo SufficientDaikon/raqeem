@@ -16,7 +16,7 @@ use raqeem_core::{Endpoint, Transcriber};
 use std::path::Path;
 
 let endpoint = Endpoint::cohere(std::env::var("COHERE_API_KEY")?, None);
-let transcript = Transcriber::new(endpoint)
+let transcript = Transcriber::new(endpoint)?  // fails only if the TLS backend won't init
     .language("ar")                           // the default; shown for clarity
     .transcribe(Path::new("voice_note.ogg"))?;
 

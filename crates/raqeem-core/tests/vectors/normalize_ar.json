@@ -1,0 +1,162 @@
+[
+  {
+    "input": "أ",
+    "expected": "ا",
+    "note": "hamza-above alef folds to bare alef"
+  },
+  {
+    "input": "إ",
+    "expected": "ا",
+    "note": "hamza-below alef folds to bare alef"
+  },
+  {
+    "input": "آ",
+    "expected": "ا",
+    "note": "madda alef folds to bare alef"
+  },
+  {
+    "input": "ٱ",
+    "expected": "ا",
+    "note": "wasla alef folds to bare alef"
+  },
+  {
+    "input": "مصطفى",
+    "expected": "مصطفي",
+    "note": "alef maqsura folds to yaa"
+  },
+  {
+    "input": "مسؤول",
+    "expected": "مسوول",
+    "note": "waw-hamza folds to waw"
+  },
+  {
+    "input": "مبتدئ",
+    "expected": "مبتدي",
+    "note": "yaa-hamza folds to yaa"
+  },
+  {
+    "input": "طماطة",
+    "expected": "طماطه",
+    "note": "taa marbuta folds to haa"
+  },
+  {
+    "input": "سـلام",
+    "expected": "سلام",
+    "note": "tatweel stripped"
+  },
+  {
+    "input": "سَلاَم",
+    "expected": "سلام",
+    "note": "harakat stripped"
+  },
+  {
+    "input": "سلامٌ عليكم",
+    "expected": "سلام عليكم",
+    "note": "tanween stripped"
+  },
+  {
+    "input": "١٢٣",
+    "expected": "123",
+    "note": "arabic-indic digits to ascii"
+  },
+  {
+    "input": "۱۲۳",
+    "expected": "123",
+    "note": "persian digits to ascii"
+  },
+  {
+    "input": "١٢٫٥",
+    "expected": "12.5",
+    "note": "U+066B decimal separator makes one number, not two"
+  },
+  {
+    "input": "Tomato",
+    "expected": "tomato",
+    "note": "ascii lower-cased"
+  },
+  {
+    "input": "  a   b  ",
+    "expected": "a b",
+    "note": "whitespace collapsed and trimmed"
+  },
+  {
+    "input": "a\tb\nc",
+    "expected": "a b c",
+    "note": "tabs and newlines are whitespace too"
+  },
+  {
+    "input": "",
+    "expected": "",
+    "note": "empty stays empty"
+  },
+  {
+    "input": "   ",
+    "expected": "",
+    "note": "whitespace-only collapses to empty"
+  },
+  {
+    "input": "الطماطم بـ ١٢٫٥ جنيه",
+    "expected": "الطماطم ب 12.5 جنيه",
+    "note": "a whole price phrase"
+  },
+  {
+    "input": "طم‌طم",
+    "expected": "طمطم",
+    "note": "ZWNJ inside a word"
+  },
+  {
+    "input": "طم​طم",
+    "expected": "طمطم",
+    "note": "ZWSP inside a word"
+  },
+  {
+    "input": "طم‍طم",
+    "expected": "طمطم",
+    "note": "ZWJ inside a word"
+  },
+  {
+    "input": "‏مرحبا",
+    "expected": "مرحبا",
+    "note": "leading RLM"
+  },
+  {
+    "input": "‎مرحبا",
+    "expected": "مرحبا",
+    "note": "leading LRM"
+  },
+  {
+    "input": "﻿مرحبا",
+    "expected": "مرحبا",
+    "note": "BOM prefix"
+  },
+  {
+    "input": "⁦مرحبا⁩",
+    "expected": "مرحبا",
+    "note": "wrapped in a bidi isolate"
+  },
+  {
+    "input": "‪مرحبا‬",
+    "expected": "مرحبا",
+    "note": "wrapped in a bidi embedding"
+  },
+  {
+    "input": "‮مرحبا‬",
+    "expected": "مرحبا",
+    "note": "wrapped in a bidi override"
+  },
+  {
+    "input": "طماطم​ ١٢٫٥",
+    "expected": "طماطم 12.5",
+    "note": "format control next to a space"
+  },
+  {
+    "input": "طماطه 12.5 جنيه",
+    "expected": "طماطه 12.5 جنيه",
+    "note": "already normalized, unchanged"
+  },
+  {
+    "input": "‫الأسعار‏: ٥٠٫٥ جنيهًا‬",
+    "expected": "الاسعار: 50.5 جنيها",
+    "note": "a realistic scraped price line: bidi embedding, RLM, hamza, arabic decimal, tanween"
+  }
+]

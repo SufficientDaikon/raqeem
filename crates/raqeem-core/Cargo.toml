@@ -19,3 +19,6 @@ thiserror.workspace = true
 
 [dev-dependencies]
 mockito = "1"
+# Unique per-test paths that clean themselves up. Fixed names under the shared system
+# temp dir collided across concurrent runs and survived a panicking test.
+tempfile = "3"

@@ -1,28 +1,54 @@
 """Offline tests for the raqeem binding. No network, no API key, no model.
 
-These deliberately mirror the Rust unit tests in `raqeem-core/src/arabic.rs`: the
-binding must expose the *same* normalization, not a second implementation that can
-drift from it.
+The normalization cases are **not** written out here. They live in
+`crates/raqeem-core/tests/vectors/normalize_ar.json`, generated from scout's
+`normalize_ar`, and the Rust suite reads the same file. Listing them separately in each
+language is what let this binding's normalization drift a whole pass behind the reference
+without either suite failing; a shared file has nothing to forget to copy.
 """
+
+import json
+import pathlib
 
 import pytest
 
 import raqeem
 
-
-def test_normalize_ar_matches_the_rust_core():
-    assert raqeem.normalize_ar("أ") == "ا"
-    assert raqeem.normalize_ar("مصطفى") == "مصطفي"  # alef maqsura -> yaa
-    assert raqeem.normalize_ar("سـلام") == "سلام"  # tatweel stripped
-    assert raqeem.normalize_ar("١٢٣") == "123"  # arabic-indic digits
-    assert raqeem.normalize_ar("۱۲۳") == "123"  # persian digits
-    assert raqeem.normalize_ar("١٢٫٥") == "12.5"  # U+066B -> one number, not two
-    assert raqeem.normalize_ar("الطماطم بـ ١٢٫٥ جنيه") == "الطماطم ب 12.5 جنيه"
+VECTORS_PATH = (
+    pathlib.Path(__file__).resolve().parents[2]
+    / "raqeem-core"
+    / "tests"
+    / "vectors"
+    / "normalize_ar.json"
+)
 
 
-def test_normalize_ar_is_idempotent():
-    once = raqeem.normalize_ar("طماطة ١٢٫٥ جنيه")
-    assert raqeem.normalize_ar(once) == once
+def load_vectors():
+    if not VECTORS_PATH.exists():
+        pytest.fail(
+            f"shared normalization vectors not found at {VECTORS_PATH}. "
+            "Run pytest from a repo checkout — these tests exist to catch drift "
+            "between the Rust core and this binding, and silently skipping them "
+            "would defeat the point."
+        )
+    return json.loads(VECTORS_PATH.read_text(encoding="utf-8"))
+
+
+VECTORS = load_vectors()
+
+
+@pytest.mark.parametrize(
+    "vector", VECTORS, ids=[v["note"] for v in VECTORS]
+)
+def test_normalize_ar_matches_the_shared_vectors(vector):
+    assert raqeem.normalize_ar(vector["input"]) == vector["expected"]
+
+
+@pytest.mark.parametrize(
+    "vector", VECTORS, ids=[v["note"] for v in VECTORS]
+)
+def test_normalize_ar_is_idempotent(vector):
+    assert raqeem.normalize_ar(vector["expected"]) == vector["expected"]
 
 
 def test_unknown_provider_raises_value_error():
@@ -33,6 +59,17 @@ def test_unknown_provider_raises_value_error():
 def test_openai_provider_requires_an_endpoint():
     with pytest.raises(ValueError):
         raqeem.transcribe("clip.wav", provider="openai")
+
+
+def test_openai_provider_requires_an_explicit_model():
+    # No silent fall-back to Cohere's dated model id: a self-hosted server has its own
+    # ids, and sending Cohere's just fails at the server with a confusing error.
+    with pytest.raises(ValueError, match="model"):
+        raqeem.transcribe(
+            "clip.wav",
+            provider="openai",
+            endpoint="http://127.0.0.1:9/v1/audio/transcriptions",
+        )
 
 
 def test_missing_cohere_key_raises_value_error(monkeypatch):
@@ -62,6 +99,7 @@ def test_unreachable_endpoint_raises_transcription_error(tmp_path):
             str(clip),
             provider="openai",
             endpoint="http://127.0.0.1:9/v1/audio/transcriptions",
+            model="whisper-1",
             timeout=5,
         )
 
@@ -72,6 +110,7 @@ def test_missing_audio_file_raises_transcription_error():
             "definitely-not-here.wav",
             provider="openai",
             endpoint="http://127.0.0.1:9/v1/audio/transcriptions",
+            model="whisper-1",
             timeout=5,
         )
 

@@ -6,8 +6,11 @@ members = ["crates/raqeem-core", "crates/raqeem"]
 exclude = ["crates/raqeem-python"]
 
 [workspace.package]
-version = "0.2.4"
+version = "0.3.0"
 edition = "2021"
+# The oldest toolchain CI actually proves. Without this, a user on an older rustc gets a
+# wall of type errors instead of "raqeem requires rustc 1.82".
+rust-version = "1.82"
 license = "Apache-2.0"
 repository = "https://github.com/SufficientDaikon/raqeem"
 authors = ["Ahmed Taha <tahaa755@gmail.com>"]
@@ -22,3 +25,14 @@ serde_json = "1"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "multipart", "rustls-tls"] }
 thiserror = "2"
 clap = { version = "4", features = ["derive", "env"] }
+
+# A one-shot CLI that starts, makes one request, and exits: it pays the startup cost on
+# every invocation and never amortizes it, so the trade of build time for a smaller,
+# faster-loading binary is the right one.
+#
+# Not `panic = "abort"`: it breaks `#[should_panic]`, and a panic crossing the PyO3
+# boundary under abort takes the host interpreter down with it.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

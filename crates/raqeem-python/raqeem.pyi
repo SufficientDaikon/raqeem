@@ -41,11 +41,15 @@ def transcribe(
     """Transcribe an audio file.
 
     With ``provider="cohere"`` the key falls back to ``$RAQEEM_API_KEY`` then
-    ``$COHERE_API_KEY``. With ``provider="openai"`` you must pass ``endpoint=``,
-    and the Cohere-scoped key is deliberately never sent there.
+    ``$COHERE_API_KEY``, and ``model`` defaults to Cohere's current dated Arabic model.
+
+    With ``provider="openai"`` both ``endpoint=`` and ``model=`` are required — your
+    server has its own model ids, and defaulting to Cohere's only produced a confusing
+    failure at the server. The Cohere-scoped ``$COHERE_API_KEY`` is deliberately never
+    sent to a self-hosted endpoint; ``$RAQEEM_API_KEY`` is, since it is raqeem's own.
 
     Raises:
-        ValueError: bad provider, or a missing key/endpoint.
+        ValueError: bad provider, or a missing key/endpoint/model.
         TranscriptionError: the transcription itself failed.
     """
 

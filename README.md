@@ -109,6 +109,7 @@ raqeem voice_note.ogg --lang ar
 raqeem clip.wav \
   --provider openai \
   --endpoint http://localhost:8000/v1/audio/transcriptions \
+  --model CohereLabs/cohere-transcribe-arabic-07-2026 \
   --lang ar
 ```
 
@@ -141,8 +142,8 @@ flag names the preset, the field names the wire format.
 
 | Flag | Default | Notes |
 |---|---|---|
-| `--provider` | `cohere` | `cohere` or `openai`. The latter needs `--endpoint`. |
-| `--endpoint` | — | Full URL of a self-hosted OpenAI-compatible server. |
+| `--provider` | `cohere` | `cohere` or `openai`. The latter needs `--endpoint` and `--model`. |
+| `--endpoint` | — | Full URL of a self-hosted OpenAI-compatible server. Rejected with `--provider cohere`, which always posts to Cohere. |
 | `--api-key` | — | Falls back to `$RAQEEM_API_KEY`. See the note below. |
 | `--model` | `cohere-transcribe-arabic-07-2026` | Cohere requires a **dated** id; undated aliases return 404. |
 | `--lang` | `ar` | ISO-639-1. |
@@ -172,6 +173,7 @@ t = raqeem.transcribe(
     "clip.wav",
     provider="openai",
     endpoint="http://localhost:8000/v1/audio/transcriptions",
+    model="CohereLabs/cohere-transcribe-arabic-07-2026",
 )
 
 # the Arabic normalizer on its own

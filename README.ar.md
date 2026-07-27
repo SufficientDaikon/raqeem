@@ -106,6 +106,7 @@ raqeem voice_note.ogg --lang ar
 raqeem clip.wav \
   --provider openai \
   --endpoint http://localhost:8000/v1/audio/transcriptions \
+  --model CohereLabs/cohere-transcribe-arabic-07-2026 \
   --lang ar
 ```
 
@@ -138,8 +139,8 @@ raqeem voice_note.ogg --format json
 
 | الخيار | الافتراضي | الملاحظات |
 |---|---|---|
-| `--provider` | `cohere` | `cohere` أو `openai`. التاني محتاج `--endpoint`. |
-| `--endpoint` | — | الـ URL الكامل لسيرفر متوافق مع OpenAI عندك. |
+| `--provider` | `cohere` | `cohere` أو `openai`. التاني محتاج `--endpoint` و `--model`. |
+| `--endpoint` | — | الـ URL الكامل لسيرفر متوافق مع OpenAI عندك. بيترفض مع `--provider cohere`، لأن ده بيروح لكوهير على طول. |
 | `--api-key` | — | بيرجع لـ `$RAQEEM_API_KEY` لو مااتحطش. شوف الملاحظة تحت. |
 | `--model` | `cohere-transcribe-arabic-07-2026` | كوهير بتشترط معرّف **مؤرّخ**؛ الأسماء غير المؤرّخة بترجّع 404. |
 | `--lang` | `ar` | ISO-639-1. |
@@ -168,6 +169,7 @@ t = raqeem.transcribe(
     "clip.wav",
     provider="openai",
     endpoint="http://localhost:8000/v1/audio/transcriptions",
+    model="CohereLabs/cohere-transcribe-arabic-07-2026",
 )
 
 # دالة معالجة النص العربي لوحدها

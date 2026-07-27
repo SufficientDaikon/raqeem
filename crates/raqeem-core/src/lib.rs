@@ -8,24 +8,28 @@
 //! use raqeem_core::{Endpoint, Transcriber};
 //!
 //! let endpoint = Endpoint::cohere(std::env::var("COHERE_API_KEY").unwrap(), None);
-//! let transcript = Transcriber::new(endpoint)
+//! let transcript = Transcriber::new(endpoint)?
 //!     .language("ar")
 //!     .transcribe(std::path::Path::new("voice_note.ogg"))?;
 //! println!("{}", transcript.text);
 //! # Ok::<(), raqeem_core::Error>(())
 //! ```
 
+#![forbid(unsafe_code)]
+
 mod arabic;
+mod credentials;
 mod endpoint;
 mod error;
 mod output;
 mod provider;
 
 pub use arabic::normalize_ar;
+pub use credentials::resolve_api_key;
 pub use endpoint::{Endpoint, COHERE_URL, DEFAULT_COHERE_MODEL};
 pub use error::{Error, Result};
 pub use output::OutputFormat;
-pub use provider::Provider;
+pub use provider::{Provider, UnknownProvider};
 
 use std::path::Path;
 use std::time::Duration;
@@ -60,23 +64,30 @@ pub struct Transcriber {
 impl Transcriber {
     /// Build a transcriber for the given endpoint, defaulting to Arabic and a
     /// [`DEFAULT_TIMEOUT_SECS`] total-request timeout.
-    pub fn new(endpoint: Endpoint) -> Self {
+    pub fn new(endpoint: Endpoint) -> Result<Self> {
         Self::with_timeout(endpoint, Duration::from_secs(DEFAULT_TIMEOUT_SECS))
     }
 
     /// Like [`new`](Self::new) but with an explicit total-request timeout — raise it
     /// for slow CPU inference or large files, lower it to fail faster. The timeout
     /// spans the whole round-trip (connect + upload + inference + download).
-    pub fn with_timeout(endpoint: Endpoint, timeout: Duration) -> Self {
+    ///
+    /// Fails only if the HTTP client cannot be built, which in practice means the TLS
+    /// backend would not initialize. This used to fall back to `Client::new()` on
+    /// error, which is not a fallback at all: that constructor panics on the very same
+    /// failure, and had it succeeded it would have installed reqwest's default 30s
+    /// timeout — silently truncating exactly the slow inference this parameter exists
+    /// to accommodate.
+    pub fn with_timeout(endpoint: Endpoint, timeout: Duration) -> Result<Self> {
         let client = reqwest::blocking::Client::builder()
             .timeout(timeout)
             .build()
-            .unwrap_or_else(|_| reqwest::blocking::Client::new());
-        Transcriber {
+            .map_err(|source| Error::Client { source })?;
+        Ok(Transcriber {
             endpoint,
             language: DEFAULT_LANGUAGE.to_string(),
             client,
-        }
+        })
     }
 
     /// Override the transcription language (ISO-639-1).
@@ -85,12 +96,17 @@ impl Transcriber {
         self
     }
 
-    /// Read `audio`, send it to the endpoint, and return the transcript.
+    /// Stream `audio` to the endpoint and return the transcript.
     pub fn transcribe(&self, audio: &Path) -> Result<Transcript> {
-        let bytes = std::fs::read(audio).map_err(|source| Error::ReadFile {
+        let read_err = |source| Error::ReadFile {
             path: audio.to_path_buf(),
             source,
-        })?;
+        };
+        // Opened and streamed rather than read into a Vec: an hour of 16-bit 44.1kHz WAV
+        // is ~600MB, and buffering it made peak memory scale with the recording.
+        let file = std::fs::File::open(audio).map_err(read_err)?;
+        let len = file.metadata().map_err(read_err)?.len();
+
         let filename = audio
             .file_name()
             .and_then(|n| n.to_str())
@@ -100,7 +116,12 @@ impl Transcriber {
         // Same multipart shape for every backend: model + language + file.
         // Order matters: Cohere rejects the request unless the text fields
         // (model, language) appear BEFORE the file part in the body.
-        let file_part = reqwest::blocking::multipart::Part::bytes(bytes).file_name(filename);
+        //
+        // reader_with_length, not reader: the length is what keeps this a
+        // Content-Length body. Without it reqwest switches to chunked transfer-encoding,
+        // which not every endpoint accepts.
+        let file_part =
+            reqwest::blocking::multipart::Part::reader_with_length(file, len).file_name(filename);
         let form = reqwest::blocking::multipart::Form::new()
             .text("model", self.endpoint.model.clone())
             .text("language", self.language.clone())
@@ -111,23 +132,31 @@ impl Transcriber {
             req = req.bearer_auth(key);
         }
 
-        let resp = req.send().map_err(|source| Error::Http {
+        let http_err = |source: reqwest::Error| Error::Http {
             url: self.endpoint.url.clone(),
-            source,
-        })?;
+            // Drop reqwest's own copy of the URL; we print it ourselves, and it can
+            // carry userinfo credentials.
+            source: source.without_url(),
+        };
+
+        let resp = req.send().map_err(http_err)?;
         let status = resp.status();
-        let body = resp.text().map_err(|source| Error::Http {
-            url: self.endpoint.url.clone(),
-            source,
-        })?;
+        let body = resp.text().map_err(http_err)?;
         if !status.is_success() {
             return Err(Error::Api {
                 status: status.as_u16(),
-                body,
+                body: error::excerpt(body),
             });
         }
 
-        let text = extract_text(&body).ok_or_else(|| Error::BadResponse { body: body.clone() })?;
+        let text = match extract_text(&body) {
+            Some(text) => text,
+            None => {
+                return Err(Error::BadResponse {
+                    body: error::excerpt(body),
+                })
+            }
+        };
         Ok(Transcript {
             text_normalized: normalize_ar(&text),
             text,
@@ -138,13 +167,42 @@ impl Transcriber {
     }
 }
 
+/// The OpenAI-standard transcription response, which vLLM and (per Cohere's docs) the
+/// hosted API both return. Unknown fields are ignored, so a backend sending extra
+/// metadata alongside `text` still parses.
+#[derive(serde::Deserialize)]
+struct Response {
+    text: String,
+}
+
 /// Pull the transcript out of an endpoint response.
 ///
-// ponytail: assumes the OpenAI-standard `{"text": "..."}` shape, which vLLM and
-// (per Cohere's docs) the hosted API both return. If a backend nests it
-// differently, add a branch here rather than a whole response type — the raw
-// body is surfaced in `Error::BadResponse` so a mismatch is obvious on first run.
+// Assumes the `{"text": "..."}` shape. If a backend nests it differently, add a branch
+// here rather than a whole response type — an excerpt of the raw body is surfaced in
+// `Error::BadResponse` so a mismatch is obvious on first run.
 fn extract_text(body: &str) -> Option<String> {
-    let v: serde_json::Value = serde_json::from_str(body).ok()?;
-    v.get("text")?.as_str().map(str::to_string)
+    serde_json::from_str::<Response>(body).ok().map(|r| r.text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::extract_text;
+
+    #[test]
+    fn pulls_text_and_ignores_extra_fields() {
+        let body = r#"{"text": "مرحبا", "duration": 1.5, "language": "ar"}"#;
+        assert_eq!(extract_text(body).as_deref(), Some("مرحبا"));
+    }
+
+    #[test]
+    fn rejects_responses_that_are_not_a_transcript() {
+        // Each of these used to be indistinguishable from "no text field" — they still
+        // are, but the point is that none of them panic or yield a bogus transcript.
+        assert_eq!(extract_text("not json at all"), None);
+        assert_eq!(extract_text(r#"{"error": "model not found"}"#), None);
+        assert_eq!(extract_text(r#"{"text": 42}"#), None);
+        assert_eq!(extract_text(r#"{"text": null}"#), None);
+        assert_eq!(extract_text("[]"), None);
+        assert_eq!(extract_text(""), None);
+    }
 }

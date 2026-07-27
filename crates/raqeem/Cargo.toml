@@ -18,5 +18,5 @@ path = "src/main.rs"
 [dependencies]
 # The version is what crates.io resolves against; the path is what local builds
 # use. A path-only dependency cannot be published.
-raqeem-core = { path = "../raqeem-core", version = "0.2.4" }
+raqeem-core = { path = "../raqeem-core", version = "0.3.0" }
 clap.workspace = true
