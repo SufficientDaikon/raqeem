@@ -47,7 +47,7 @@ The audio is streamed from the file handle rather than read into memory, so peak
 doesn't scale with the length of the recording. `Transcriber` is `Send + Sync` and holds a
 pooled client — share one across threads rather than building one per file.
 
-MSRV 1.82.
+MSRV 1.86.
 
 The CLI over this crate is [`raqeem`](https://crates.io/crates/raqeem); the Python wheel is
 `pip install raqeem`.

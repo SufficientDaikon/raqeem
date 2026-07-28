@@ -43,6 +43,18 @@ pub const DEFAULT_LANGUAGE: &str = "ar";
 /// which truncates a slow transcription mid-inference.)
 pub const DEFAULT_TIMEOUT_SECS: u64 = 300;
 
+/// Time allowed to establish the TCP/TLS connection, within the total timeout above.
+/// Separate because a host that never answers should fail in seconds, not in minutes.
+pub const CONNECT_TIMEOUT_SECS: u64 = 15;
+
+/// Largest response body accepted from an endpoint, in bytes.
+///
+/// A transcript is kilobytes; 64 MiB is roughly six hundred times more headroom than any
+/// real one needs. The cap exists because everything downstream — the UTF-8 decode, the
+/// JSON parse, [`normalize_ar`] — allocates again, so an endpoint returning 200 MB cost
+/// ~580 MB of resident memory before this was here.
+pub const MAX_RESPONSE_BYTES: u64 = 64 * 1024 * 1024;
+
 /// A completed transcription. `text` is the model's verbatim output; the folded
 /// `text_normalized` (see [`normalize_ar`]) is what downstream parsers consume.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -81,6 +93,15 @@ impl Transcriber {
     pub fn with_timeout(endpoint: Endpoint, timeout: Duration) -> Result<Self> {
         let client = reqwest::blocking::Client::builder()
             .timeout(timeout)
+            // A black-holed host would otherwise burn the entire total timeout — five
+            // minutes by default — before admitting it never connected.
+            .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS))
+            // Redirects are never followed. reqwest's default is to follow up to ten,
+            // and for a client posting to one known API route that only causes harm:
+            // a 302/303 downgrades POST to GET and drops the body, so the audio is never
+            // uploaded and whatever comes back gets parsed as a transcript. See
+            // `Error::Redirect`.
+            .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|source| Error::Client { source })?;
         Ok(Transcriber {
@@ -133,15 +154,49 @@ impl Transcriber {
         }
 
         let http_err = |source: reqwest::Error| Error::Http {
-            url: self.endpoint.url.clone(),
-            // Drop reqwest's own copy of the URL; we print it ourselves, and it can
-            // carry userinfo credentials.
+            // Redacted, and reqwest's own copy dropped: it appends " for url (...)" to its
+            // Display, which would print the endpoint twice — credentials included.
+            url: error::redact_url(&self.endpoint.url),
             source: source.without_url(),
         };
 
         let resp = req.send().map_err(http_err)?;
         let status = resp.status();
+
+        // Refuse a redirect rather than follow it. See `Error::Redirect` for why following
+        // is worse than failing here.
+        if status.is_redirection() {
+            return Err(Error::Redirect {
+                status: status.as_u16(),
+                location: resp
+                    .headers()
+                    .get(reqwest::header::LOCATION)
+                    .and_then(|v| v.to_str().ok())
+                    // A redirect target can carry credentials too.
+                    .map(error::redact_url),
+            });
+        }
+
+        // Bound the response before reading it. `Content-Length` is the cheap check; a
+        // chunked reply advertises none, so that case is caught after the fact instead.
+        if let Some(len) = resp.content_length() {
+            if len > MAX_RESPONSE_BYTES {
+                return Err(Error::ResponseTooLarge {
+                    got: len,
+                    limit: MAX_RESPONSE_BYTES,
+                });
+            }
+        }
         let body = resp.text().map_err(http_err)?;
+        if body.len() as u64 > MAX_RESPONSE_BYTES {
+            return Err(Error::ResponseTooLarge {
+                got: body.len() as u64,
+                limit: MAX_RESPONSE_BYTES,
+            });
+        }
+        // Anything the endpoint sent back may be quoted into an error below, so take the
+        // caller's own key out of it first.
+        let body = error::scrub_secret(body, self.endpoint.api_key.as_deref());
         if !status.is_success() {
             return Err(Error::Api {
                 status: status.as_u16(),

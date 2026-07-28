@@ -161,7 +161,7 @@ fn run(cli: Cli) -> std::result::Result<String, String> {
             let model = cli
                 .model
                 .ok_or("--provider openai needs --model <id> (your server's model name)")?;
-            Endpoint::openai_compatible(url, model, api_key)
+            Endpoint::openai_compatible(url, model, api_key).map_err(|e| e.to_string())?
         }
     };
 

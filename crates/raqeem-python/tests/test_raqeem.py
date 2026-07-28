@@ -61,6 +61,26 @@ def test_openai_provider_requires_an_endpoint():
         raqeem.transcribe("clip.wav", provider="openai")
 
 
+def test_a_blank_api_key_is_not_a_key(monkeypatch):
+    # An empty env var is an everyday state — an unresolved CI secret, `export KEY=` in a
+    # script. It used to pass the key check and send `Authorization: Bearer `, producing an
+    # opaque 401 from the server instead of this clear local error.
+    monkeypatch.setenv("COHERE_API_KEY", "")
+    monkeypatch.setenv("RAQEEM_API_KEY", "   ")
+    with pytest.raises(ValueError):
+        raqeem.transcribe("clip.wav")
+    with pytest.raises(ValueError):
+        raqeem.transcribe("clip.wav", api_key="")
+
+
+def test_a_malformed_endpoint_is_rejected_by_name(monkeypatch):
+    monkeypatch.delenv("COHERE_API_KEY", raising=False)
+    monkeypatch.delenv("RAQEEM_API_KEY", raising=False)
+    for bad in ("", "not-a-url", "ftp://host/v1"):
+        with pytest.raises(ValueError, match="endpoint"):
+            raqeem.transcribe("clip.wav", provider="openai", endpoint=bad, model="m")
+
+
 def test_openai_provider_requires_an_explicit_model():
     # No silent fall-back to Cohere's dated model id: a self-hosted server has its own
     # ids, and sending Cohere's just fails at the server with a confusing error.

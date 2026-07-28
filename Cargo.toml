@@ -8,9 +8,13 @@ exclude = ["crates/raqeem-python"]
 [workspace.package]
 version = "0.3.0"
 edition = "2021"
-# The oldest toolchain CI actually proves. Without this, a user on an older rustc gets a
-# wall of type errors instead of "raqeem requires rustc 1.82".
-rust-version = "1.82"
+# Verified in both directions, not guessed: 1.86 builds the workspace, 1.85 fails with
+# "icu_* requires rustc 1.86" (the ICU crates arrive via reqwest -> url -> idna). Without
+# this field a user on an older toolchain gets a wall of type errors instead of a clear
+# message, and a *wrong* value produces exactly that error it exists to prevent — which is
+# what the first version of this line, guessed at 1.82, actually did. The `msrv` CI job
+# keeps it honest.
+rust-version = "1.86"
 license = "Apache-2.0"
 repository = "https://github.com/SufficientDaikon/raqeem"
 authors = ["Ahmed Taha <tahaa755@gmail.com>"]
@@ -25,6 +29,10 @@ serde_json = "1"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "multipart", "rustls-tls"] }
 thiserror = "2"
 clap = { version = "4", features = ["derive", "env"] }
+# Already in the tree via reqwest, so this costs no build time. Used to strip credentials
+# out of endpoint URLs before they reach an error message, and to reject a malformed
+# --endpoint up front rather than as reqwest's opaque "builder error" at send time.
+url = "2"
 
 # A one-shot CLI that starts, makes one request, and exits: it pays the startup cost on
 # every invocation and never amortizes it, so the trade of build time for a smaller,

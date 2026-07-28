@@ -12,7 +12,44 @@ A hardening pass over the whole client. The headline is a normalization bug that
 `text_normalized` silently wrong for text carrying invisible characters — if you match on
 that field, re-run anything you have cached.
 
+### Security
+
+- **A password in the endpoint URL was printed to stderr.**
+  `--endpoint https://bob:hunter2@host/v1` echoed `hunter2` verbatim into every error
+  message, and stderr ends up in CI logs and pasted bug reports. URLs are now redacted
+  wherever they reach a human — errors and `Debug` alike.
+
+- **`Endpoint`'s derived `Debug` printed the API key in full.** Any downstream
+  `dbg!(&endpoint)` or `tracing::debug!(?endpoint)` disclosed it. `Debug` is now written by
+  hand and masks the key, showing only whether one is set.
+
+- **An endpoint that echoed the `Authorization` header got the caller's key printed back
+  at them.** Response bodies are quoted into errors for diagnosis; the key is now scrubbed
+  out of them first.
+
 ### Fixed
+
+- **A redirect made raqeem print a transcript it never received.** reqwest followed 3xx
+  responses by default; a 302 or 303 downgrades POST to GET and drops the body, so the audio
+  was never uploaded and whatever the redirect target returned was parsed and printed as a
+  transcription. Redirects are no longer followed at all — a 3xx is now an error naming the
+  `Location` and telling you to point `--endpoint` at the final URL. This was a silently
+  wrong answer, the worst failure mode in the tool.
+
+- **An oversized response could exhaust memory.** There was no cap: a 200 MB response body
+  drove 580 MB of resident memory and printed 200 MB to stdout, because the decode, the JSON
+  parse and the normalization each allocate it again. Responses are now capped at 64 MiB —
+  about six hundred times more than a real transcript needs — and the same case now peaks at
+  7 MB.
+
+- **A blank credential defeated the API-key check.** `COHERE_API_KEY=""`, an empty
+  `$RAQEEM_API_KEY`, or `--api-key ""` all passed the "do we have a key?" gate and sent
+  `Authorization: Bearer `, producing an opaque 401 from the server instead of the clear
+  local error. An empty or whitespace-only value now counts as absent — and, importantly,
+  falls through to the next source rather than shadowing it.
+
+- **A malformed `--endpoint` reported `builder error`.** An empty, unparseable, or non-http
+  URL is now rejected up front, by name.
 
 - **`normalize_ar` was missing an entire pass, so invisible characters survived it.**
   Zero-width space and joiners, the bidi marks, embeddings, overrides and isolates, and
@@ -59,8 +96,16 @@ that field, re-run anything you have cached.
   It used to default to Cohere's dated model id, which a self-hosted server has no reason
   to recognise; the result was a confusing failure at the server rather than a clear one
   here.
-- **Breaking: `Error` gained a `Client` variant and is now `#[non_exhaustive]`.** Matches
-  on it need a `_` arm. The upside is that the next variant won't be a breaking change.
+- **Breaking: `Endpoint::openai_compatible` returns `Result`.** It now parses the URL, so a
+  typo fails immediately and by name. `Endpoint::cohere` is unchanged — its URL is a
+  constant.
+- **Breaking: `Error` gained `Client`, `Redirect`, `InvalidEndpoint` and `ResponseTooLarge`
+  variants and is now `#[non_exhaustive]`.** Matches on it need a `_` arm. The upside is
+  that the next variant won't be a breaking change.
+- **`Endpoint`'s `Debug` output changed** — the API key is masked and the URL redacted. If
+  you have a snapshot test pinned to the old format, it will need updating.
+- A separate 15-second connect timeout. Previously a black-holed host burned the entire
+  300-second total timeout before admitting it never connected.
 - The audio file is **streamed** to the endpoint instead of being read into memory first.
   Peak memory no longer scales with the length of the recording. Note that a disk error
   *during* the upload now surfaces as a transport error rather than `Error::ReadFile`.
@@ -76,8 +121,12 @@ that field, re-run anything you have cached.
 ### Added
 
 - `Provider` implements `FromStr` and `Display`, so backend names parse in one place.
-- An MSRV (`rust-version = "1.82"`), so an old toolchain gets a clear message.
-- `cargo audit` runs in CI, and `cargo test`/`clippy` now run `--locked`.
+- An MSRV (`rust-version = "1.86"`), so an old toolchain gets a clear message instead of a
+  wall of type errors. Verified in both directions — 1.86 builds, 1.85 fails on the ICU
+  crates — and pinned by a CI job, because the first attempt at this field was guessed and
+  wrong.
+- `cargo deny` runs in CI (advisories, licences, duplicate versions and source policy), and
+  `cargo test`/`clippy` now run `--locked`.
 
 ## [0.2.4] — 2026-07-28
 

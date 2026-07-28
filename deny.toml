@@ -1,0 +1,37 @@
+# cargo-deny policy. Runs in CI (`.github/workflows/ci.yml`, job `deny`).
+#
+# Chosen over a bare `cargo audit` because it covers the same advisory database and adds
+# licence policy, duplicate-version detection and source gating in one pass.
+
+[advisories]
+# Fail on any known vulnerability. This client handles API keys and TLS across ~180
+# transitive crates, so an advisory is worth a red build.
+yanked = "deny"
+
+[licenses]
+# The project is Apache-2.0. These are the permissive licences compatible with shipping a
+# static binary; anything outside the list should be a deliberate decision, not a surprise.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "MITNFA",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "CC0-1.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+# Duplicate major versions of the same crate bloat the binary and usually mean a
+# dependency needs updating rather than that two copies are genuinely required.
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

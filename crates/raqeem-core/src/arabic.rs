@@ -16,9 +16,18 @@
 //! digits → ASCII, and the Arabic decimal separator U+066B → `.` (so «١٢٫٥» folds to
 //! `12.5`, one number, not two).
 //!
-//! One known and accepted divergence: context-sensitive Unicode case tailoring. Python
-//! lower-cases a word-final Greek `Σ` to `ς`, Rust to `σ`. Out of domain for Arabic
-//! transcripts, and scout re-normalizes through the Python function downstream anyway.
+//! **Parity, precisely.** Verified identical across every Arabic block and all of ASCII —
+//! 258,176 single-character probes over the whole BMP plus astral samples, and 200,000
+//! randomised multi-character strings mixing Arabic, diacritics, Quranic marks, both digit
+//! sets, format controls, every whitespace class and the ASCII separators. Zero mismatches,
+//! zero idempotence failures on either side.
+//!
+//! The one accepted divergence is **case mapping of cased non-Arabic, non-ASCII letters**,
+//! and it is not a logic difference: the two runtimes carry different Unicode tables. Rust
+//! 1.93 lowercases eight characters in Cyrillic and Latin Extended-D that scout's Python
+//! (Unicode 15.0.0) does not yet know exist, and Python lowercases a word-final Greek `Σ`
+//! to `ς` where Rust gives `σ`. Nine codepoints, none of them in any Arabic block or in
+//! ASCII, and it resolves itself when that runtime's Unicode data catches up.
 
 /// What the reference collapses into a single space.
 ///

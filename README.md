@@ -198,9 +198,13 @@ raises `ValueError`.
   is not drift protection, and it did not protect: the Rust port fell an entire pass behind its
   reference and both suites stayed green, because neither had a case containing a zero-width
   joiner. Both suites now read the same generated vector file, and the claim that the two agree
-  rests on sweeping every plausible codepoint through both and diffing — 6,912 probes across
-  ASCII, Latin-1, the Arabic blocks, General Punctuation and both Presentation Forms ranges.
-  That sweep is what found the bug, and a second one nobody had looked for. See
+  rests on sweeping rather than on chosen cases: **258,176 single-character probes** across
+  the whole BMP plus astral samples, and **200,000 randomised multi-character strings**
+  mixing Arabic, diacritics, Quranic marks, both digit sets, format controls and every
+  whitespace class. Zero mismatches, zero idempotence failures. Sweeping found both bugs —
+  the second one nobody had thought to look for. The single accepted divergence is case
+  mapping of cased non-Arabic letters, where the Rust and Python runtimes carry different
+  Unicode tables: nine codepoints, none in Arabic or ASCII. See
   [`crates/raqeem-core/tests/vectors/`](crates/raqeem-core/tests/vectors/).
 - **Live, against Cohere.** Real audio through both the PyPI wheel and the CLI binary — a 611 KB
   file came back in about 2 seconds.
@@ -253,7 +257,7 @@ Issues and PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md), and
 that walks each edit it takes, including the credential decision the compiler will make you
 confront.
 
-Building from source needs Rust 1.82 or newer.
+Building from source needs Rust 1.86 or newer.
 
 ## License
 

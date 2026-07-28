@@ -28,10 +28,22 @@ pub fn resolve_api_key(
     explicit: Option<String>,
     cohere_env: Option<String>,
 ) -> Option<String> {
+    let (explicit, cohere_env) = (present(explicit), present(cohere_env));
     match provider {
         Provider::Cohere => explicit.or(cohere_env),
         Provider::OpenAiCompatible => explicit,
     }
+}
+
+/// A blank value is not a key.
+///
+/// `std::env::var` hands back `Ok("")` for a variable that is set but empty, which is an
+/// everyday state: a CI secret that didn't resolve, `export COHERE_API_KEY=` in a shell
+/// script, a `.env` line with nothing after the `=`. Treating that as a credential meant
+/// sending `Authorization: Bearer ` and getting an opaque 401 back from the server, in
+/// place of the clear local error one line further on.
+fn present(key: Option<String>) -> Option<String> {
+    key.filter(|k| !k.trim().is_empty())
 }
 
 #[cfg(test)]
@@ -77,6 +89,45 @@ mod tests {
                 Some("cohere-key".into())
             ),
             Some("mykey".into())
+        );
+    }
+
+    #[test]
+    fn a_blank_key_is_not_a_key() {
+        for blank in ["", "   ", "\t", "\n"] {
+            assert_eq!(
+                resolve_api_key(Provider::Cohere, Some(blank.into()), None),
+                None,
+                "blank explicit key {blank:?} should not count"
+            );
+            assert_eq!(
+                resolve_api_key(Provider::Cohere, None, Some(blank.into())),
+                None,
+                "blank $COHERE_API_KEY {blank:?} should not count"
+            );
+        }
+    }
+
+    /// The case that actually bites: an empty `--api-key` or `$RAQEEM_API_KEY` must fall
+    /// through to a real `$COHERE_API_KEY` rather than shadowing it with nothing.
+    #[test]
+    fn a_blank_explicit_key_falls_through_to_the_env() {
+        assert_eq!(
+            resolve_api_key(Provider::Cohere, Some("".into()), Some("real-key".into())),
+            Some("real-key".into())
+        );
+    }
+
+    /// ...but it must not resurrect the Cohere key for a self-hosted endpoint.
+    #[test]
+    fn a_blank_explicit_key_does_not_leak_the_cohere_key_to_openai() {
+        assert_eq!(
+            resolve_api_key(
+                Provider::OpenAiCompatible,
+                Some("".into()),
+                Some("cohere-key".into())
+            ),
+            None
         );
     }
 

@@ -107,7 +107,10 @@ fn build_endpoint(
                     "provider='openai' needs model='...' (your server's model name)",
                 )
             })?;
-            Ok(Endpoint::openai_compatible(url, model, key))
+            // A malformed endpoint is a caller mistake, so it belongs with the other
+            // ValueErrors rather than surfacing later as a TranscriptionError.
+            Endpoint::openai_compatible(url, model, key)
+                .map_err(|e| PyValueError::new_err(e.to_string()))
         }
     }
 }

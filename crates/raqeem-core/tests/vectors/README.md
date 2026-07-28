@@ -31,26 +31,49 @@ normalize_ar(your_input)
 ## Vectors are not sufficient on their own
 
 Thirty-odd hand-picked cases could not have caught the drift they now guard against — the
-gap was in a range nobody had thought to test. Two divergences from the reference were
-found by sweeping *every* plausible codepoint and comparing the two implementations
-directly, not by choosing cases:
+gap was in a range nobody had thought to test. Both divergences found so far came from
+sweeping *every* plausible codepoint and comparing the implementations directly, never from
+choosing cases:
 
 - the `_FORMAT_STRIP` set the port was missing
 - U+001C–001F, which Python's `\s` collapses and `char::is_whitespace` does not
 
-If you change either implementation, re-run that sweep rather than trusting this file.
-It needs both scout and a built binding on the path, which is why it isn't a CI job:
+If you change either implementation, re-run the sweep rather than trusting this file. It
+needs scout importable and a built binding, which is why it isn't a CI job.
 
-```
-python -c "
-import sys; sys.path.insert(0, 'E:/work')
+The full BMP, plus the multi-character fuzz that the single-character sweep cannot cover
+(interactions between passes, and the whitespace state machine):
+
+```python
+import random, sys
+sys.path.insert(0, "E:/work")
 from scout.arabic import normalize_ar as py
 import raqeem
-bad = [hex(c) for r in [(0,0x2FF),(0x600,0x6FF),(0x2000,0x206F),(0xFE70,0xFEFF)]
-       for c in range(r[0], r[1]+1)
-       if not (0xD800 <= c < 0xE000)
-       for probe in [chr(c), f'  a {chr(c)}  b  ', f'{chr(c)} طماطة {chr(c)}']
-       if raqeem.normalize_ar(probe) != py(probe)]
-print(sorted(set(bad)) or 'no divergence')
-"
+
+# Known-accepted: case mapping of cased non-Arabic letters, where the Rust toolchain's
+# Unicode tables and the Python runtime's differ. None are in Arabic or ASCII.
+ACCEPTED = {0x03A3, 0x1C89, 0xA7CB, 0xA7CC, 0xA7CE, 0xA7D2, 0xA7D4, 0xA7DA, 0xA7DC}
+
+bad = set()
+for cp in range(0x0000, 0x10000):
+    if 0xD800 <= cp < 0xE000 or cp in ACCEPTED:
+        continue
+    c = chr(cp)
+    for probe in (c, f"  a {c}  b  ", f"{c}{c} طماطة {c}", f"١٢٫٥{c}جنيه"):
+        if raqeem.normalize_ar(probe) != py(probe):
+            bad.add(cp)
+print("single-char:", sorted(hex(c) for c in bad) or "no divergence")
+
+alphabet = [chr(c) for c in range(0x0621, 0x0700)] + list("آأإٱىةؤئ \t\n") + \
+           [chr(c) for c in range(0x200B, 0x2010)] + ["\uFEFF", "\u001C"] + list("abc0123.")
+random.seed(1)
+fuzz_bad = []
+for _ in range(200_000):
+    s = "".join(random.choice(alphabet) for _ in range(random.randint(0, 24)))
+    if raqeem.normalize_ar(s) != py(s):
+        fuzz_bad.append(s)
+    r = raqeem.normalize_ar(s)
+    if raqeem.normalize_ar(r) != r:
+        fuzz_bad.append(("not idempotent", s))
+print("multi-char fuzz:", fuzz_bad[:5] or "no divergence")
 ```
