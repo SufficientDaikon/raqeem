@@ -59,8 +59,9 @@ raqeem voice_note.ogg
   your own vLLM when you want no rate limits and no audio leaving your network. Same interface.
 - **Two forms of every transcript.** The model's verbatim text, plus an Arabic-normalized form:
   alef/hamza folded, taa-marbuta and tatweel and diacritics handled, Arabic-Indic digits turned
-  to ASCII. `١٢٫٥` becomes `12.5` as **one** number. That's the difference between a transcript
-  you can read and one a program can parse.
+  to ASCII, and the invisible characters that ride along with copied RTL text — zero-width
+  joiners, bidi marks, a stray BOM — removed. `١٢٫٥` becomes `12.5` as **one** number. That's
+  the difference between a transcript you can read and one a program can parse.
 - **Callable from anything.** Rust core, native Python wheel, and a binary that prints JSON — so
   Go, Node, a shell script, or a cron job all drive the same engine.
 
@@ -144,16 +145,20 @@ flag names the preset, the field names the wire format.
 |---|---|---|
 | `--provider` | `cohere` | `cohere` or `openai`. The latter needs `--endpoint` and `--model`. |
 | `--endpoint` | — | Full URL of a self-hosted OpenAI-compatible server. Rejected with `--provider cohere`, which always posts to Cohere. |
-| `--api-key` | — | Falls back to `$RAQEEM_API_KEY`. See the note below. |
-| `--model` | `cohere-transcribe-arabic-07-2026` | Cohere requires a **dated** id; undated aliases return 404. |
+| `--api-key` | — | Falls back to `$RAQEEM_API_KEY`. Prefer the env var — see below. |
+| `--model` | `cohere-transcribe-arabic-07-2026` | That default applies to `--provider cohere`, which needs a **dated** id (undated aliases 404). Required with `--provider openai`. |
 | `--lang` | `ar` | ISO-639-1. |
-| `--timeout` | `300` | Seconds, covering upload + inference + download. Raise it for slow CPU inference. |
+| `--timeout` | `300` | Seconds, covering upload + inference + download. Raise it for slow CPU inference. Accepts 1–86400. |
 | `--format` | `text` | `text` or `json`. |
 
 The Cohere-scoped `$COHERE_API_KEY` is deliberately **never** sent to a self-hosted `--endpoint`;
 that key belongs to Cohere and has no business on someone else's server. `--api-key` and
 `$RAQEEM_API_KEY` are yours, so they go wherever you point the tool — including a self-hosted
 endpoint that needs auth.
+
+Pass the key through the environment rather than `--api-key` where you can. An argument is
+visible to every other process on the machine (`ps`, `/proc/<pid>/cmdline`) and it lands in your
+shell history; an environment variable does neither.
 
 ## Python API
 
@@ -180,15 +185,23 @@ t = raqeem.transcribe(
 raqeem.normalize_ar("الطماطم بـ ١٢٫٥ جنيه")   # 'الطماطم ب 12.5 جنيه'
 ```
 
-Failures raise `raqeem.TranscriptionError`. A bad provider or a missing key/endpoint raises
-`ValueError`.
+Failures raise `raqeem.TranscriptionError`. A bad provider, or a missing key / endpoint / model,
+raises `ValueError`.
 
 ## What's actually been tested
 
 - **Offline suite.** `cargo test` covers Arabic normalization, the multipart body (including the
   field ordering Cohere insists on), and error propagation from a mocked HTTP endpoint. No
-  network, no API key, no model. The Python binding re-asserts the same normalization cases so
-  the two implementations can't drift.
+  network, no API key, no model.
+- **Normalization parity, the honest version.** `normalize_ar` is one function maintained in two
+  languages, and until 0.3.0 the Rust and Python suites each listed their own cases by hand. That
+  is not drift protection, and it did not protect: the Rust port fell an entire pass behind its
+  reference and both suites stayed green, because neither had a case containing a zero-width
+  joiner. Both suites now read the same generated vector file, and the claim that the two agree
+  rests on sweeping every plausible codepoint through both and diffing — 6,912 probes across
+  ASCII, Latin-1, the Arabic blocks, General Punctuation and both Presentation Forms ranges.
+  That sweep is what found the bug, and a second one nobody had looked for. See
+  [`crates/raqeem-core/tests/vectors/`](crates/raqeem-core/tests/vectors/).
 - **Live, against Cohere.** Real audio through both the PyPI wheel and the CLI binary — a 611 KB
   file came back in about 2 seconds.
 - **Not verified live:** the self-hosted path. `--provider openai` has mock tests against a fake
@@ -237,7 +250,10 @@ a Cohere key — but the link above won't open for you cold.
 
 Issues and PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md), and
 [.claude/skills/](.claude/skills/) if you're adding a transcription backend — there's a skill
-that walks the three edits it takes.
+that walks each edit it takes, including the credential decision the compiler will make you
+confront.
+
+Building from source needs Rust 1.82 or newer.
 
 ## License
 

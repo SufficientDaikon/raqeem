@@ -186,7 +186,19 @@ fn extract_text(body: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use super::{Transcriber, Transcript};
+
     use super::extract_text;
+
+    /// The README tells people to share one `Transcriber` across threads instead of
+    /// building one per file, which is only sound if this holds. Compile-time check: it
+    /// fails to build, not at runtime.
+    #[test]
+    fn transcriber_and_transcript_are_send_and_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<Transcriber>();
+        assert_send_sync::<Transcript>();
+    }
 
     #[test]
     fn pulls_text_and_ignores_extra_fields() {

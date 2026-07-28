@@ -36,12 +36,16 @@ t = raqeem.transcribe(
 raqeem.normalize_ar("الطماطم بـ ١٢٫٥ جنيه")   # 'الطماطم ب 12.5 جنيه'
 ```
 
-`text_normalized` folds alef/hamza, taa-marbuta, strips tatweel and diacritics, and
-converts Arabic-Indic and Persian digits to ASCII — note `١٢٫٥` becomes `12.5`, **one**
-number rather than two, which matters if anything downstream parses prices or quantities.
+`text_normalized` folds alef/hamza, taa-marbuta, strips tatweel and diacritics, removes the
+invisible characters that come along with copied RTL text (zero-width joiners, bidi marks,
+a stray BOM), and converts Arabic-Indic and Persian digits to ASCII — note `١٢٫٥` becomes
+`12.5`, **one** number rather than two, which matters if anything downstream parses prices
+or quantities. `normalize_ar` is idempotent and safe on mixed Arabic/ASCII, so you can run
+it on both sides of a comparison.
 
-Failures raise `raqeem.TranscriptionError`; a bad provider or a missing key/endpoint
-raises `ValueError`.
+Failures raise `raqeem.TranscriptionError`; a bad provider, or a missing key / endpoint /
+model, raises `ValueError`. `transcribe` releases the GIL for the round-trip, so it does not
+block other threads while the endpoint is working.
 
 Full docs, the CLI, and the roadmap (subtitles, diarization, more bindings):
 **https://github.com/SufficientDaikon/raqeem**

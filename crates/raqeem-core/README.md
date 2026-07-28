@@ -35,11 +35,19 @@ let endpoint = Endpoint::openai_compatible(
 ```
 
 `text_normalized` runs the output through `normalize_ar` — alef/hamza folding,
-taa-marbuta → haa, tatweel and diacritics stripped, Arabic-Indic and Persian digits → ASCII
-(`١٢٫٥` becomes `12.5`, one number) — so downstream matching gets a stable form.
+taa-marbuta → haa, tatweel and diacritics stripped, invisible format controls removed
+(zero-width joiners, bidi marks, BOM), Arabic-Indic and Persian digits → ASCII (`١٢٫٥`
+becomes `12.5`, one number) — so downstream matching gets a stable form. `normalize_ar` is
+public and idempotent; you can run it on either side of a comparison.
 
 Two things Cohere's API requires, both handled here: the `model` and `language` form fields
 must precede the file part, and the model id must be **dated** (undated aliases 404).
+
+The audio is streamed from the file handle rather than read into memory, so peak memory
+doesn't scale with the length of the recording. `Transcriber` is `Send + Sync` and holds a
+pooled client — share one across threads rather than building one per file.
+
+MSRV 1.82.
 
 The CLI over this crate is [`raqeem`](https://crates.io/crates/raqeem); the Python wheel is
 `pip install raqeem`.

@@ -41,10 +41,13 @@ provenance:
 ```
 
 That JSON contract is the language-agnostic API: shell out from Python, Node, Go, anything.
-(Python has a native wheel instead — `pip install raqeem`.)
+(Python has a native wheel instead — `pip install raqeem`.) It writes one line to stdout and
+exits non-zero on failure with the reason on stderr, so `raqeem clip.wav | head -1` and the
+usual pipeline habits behave.
 
 The Cohere-scoped `$COHERE_API_KEY` is deliberately **never** sent to a self-hosted
-`--endpoint`; use `--api-key` or `$RAQEEM_API_KEY` for those.
+`--endpoint`; use `--api-key` or `$RAQEEM_API_KEY` for those. Prefer the environment over
+`--api-key`: an argument shows up in `ps` and in your shell history.
 
 Prebuilt binaries, full docs, and the library:
 [github.com/SufficientDaikon/raqeem](https://github.com/SufficientDaikon/raqeem).
