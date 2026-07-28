@@ -9,19 +9,23 @@
 yanked = "deny"
 
 [licenses]
-# The project is Apache-2.0. These are the permissive licences compatible with shipping a
-# static binary; anything outside the list should be a deliberate decision, not a surprise.
+# Exactly what the locked graph actually contains — computed from Cargo.lock, not guessed,
+# so that a new licence appearing is a deliberate decision rather than something already
+# pre-authorised. Every entry below is the *only* option for at least one crate; licences
+# that appear solely inside an `OR` that MIT or Apache-2.0 already satisfies are omitted.
 allow = [
-    "Apache-2.0",
-    "Apache-2.0 WITH LLVM-exception",
-    "MIT",
-    "MITNFA",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "ISC",
-    "Unicode-3.0",
-    "Zlib",
-    "CC0-1.0",
+    "Apache-2.0",     # the project's own licence, and several dependencies'
+    "MIT",            # the bulk of the tree
+    "ISC",            # untrusted, rustls-webpki; also half of ring's "Apache-2.0 AND ISC"
+    "Unicode-3.0",    # the ICU crates, reached via reqwest -> url -> idna
+    "BSD-3-Clause",   # subtle
+    # webpki-roots — Mozilla's CA root bundle. A data licence rather than a code one, and
+    # unavoidable with rustls, which is how this client gets TLS.
+    "CDLA-Permissive-2.0",
+    # colored, via similar/mockito. Dev-dependency only: it colours test diffs and is never
+    # linked into a published artifact. MPL-2.0 is file-level copyleft, so even if it were
+    # linked it would not reach across into this code.
+    "MPL-2.0",
 ]
 confidence-threshold = 0.9
 
