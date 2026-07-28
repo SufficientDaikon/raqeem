@@ -14,6 +14,20 @@ that field, re-run anything you have cached.
 
 ### Security
 
+If you have ever run `raqeem --help` with `$RAQEEM_API_KEY` set and shared the output — a CI
+log, an issue, a screen share, a recording — **rotate that key.** Upgrading does not un-leak
+a key that is already published somewhere.
+
+- **`--help` printed the API key in plaintext.** clap renders the *value* of a set
+  environment variable into help output unless `hide_env_values` is set, and it wasn't. With
+  `$RAQEEM_API_KEY` exported, `raqeem --help` emitted `[env: RAQEEM_API_KEY=<your key>]`. It
+  now shows the variable name only. The key was never transmitted anywhere it shouldn't have
+  been — the exposure is entirely in help output that people paste into public places.
+
+- `--api-key` on the command line is visible to other processes (`ps`,
+  `/proc/<pid>/cmdline`) and lands in shell history. The flag stays, but its help text now
+  says so and points at `$RAQEEM_API_KEY` instead.
+
 - **A password in the endpoint URL was printed to stderr.**
   `--endpoint https://bob:hunter2@host/v1` echoed `hunter2` verbatim into every error
   message, and stderr ends up in CI logs and pasted bug reports. URLs are now redacted
@@ -70,8 +84,10 @@ that field, re-run anything you have cached.
   Rust's `char::is_whitespace` does not, so they survived into the output. Older than the
   bug above and unrelated to it. Found by sweeping every plausible codepoint against the
   reference rather than by picking test cases — which is also the evidence for the parity
-  claim now: 6,912 probes across ASCII, Latin-1, the Arabic blocks, General Punctuation
-  and both Presentation Forms ranges, zero divergence.
+  claim now: 258,176 single-character probes over the whole BMP plus astral samples, and
+  200,000 randomised multi-character strings. Zero mismatches, zero idempotence failures.
+  The only divergence is case mapping of cased non-Arabic letters, where the Rust and
+  Python runtimes carry different Unicode tables — nine codepoints, none in Arabic or ASCII.
 
 - **`Transcriber::with_timeout` turned a recoverable error into a panic.** It fell back to
   `Client::new()` when the builder failed — a constructor that panics on the very same
@@ -127,31 +143,6 @@ that field, re-run anything you have cached.
   wrong.
 - `cargo deny` runs in CI (advisories, licences, duplicate versions and source policy), and
   `cargo test`/`clippy` now run `--locked`.
-
-## [0.2.4] — 2026-07-28
-
-Security release. If you have ever run `raqeem --help` with `$RAQEEM_API_KEY` set and shared
-the output — a CI log, an issue, a screen share, a recording — **rotate that key.** Upgrading
-does not un-leak a key that is already published somewhere.
-
-### Security
-
-- **`--help` printed the API key in plaintext.** clap renders the *value* of a set
-  environment variable into help output unless `hide_env_values` is set, and it wasn't. With
-  `$RAQEEM_API_KEY` exported, `raqeem --help` emitted
-  `[env: RAQEEM_API_KEY=<your key>]`. It now shows the variable name only. The key was never
-  transmitted anywhere it shouldn't have been — the exposure is entirely in help output that
-  users copy into public places.
-
-  Only `cargo install raqeem` picks this up by upgrading. Anyone running a prebuilt binary
-  from a GitHub Release or the PyPI wheel stays exposed until they pull the new artifact.
-
-- `--api-key` on the command line is visible to other processes (`ps`,
-  `/proc/<pid>/cmdline`) and lands in shell history. The flag stays, but its help text now
-  says so and points at `$RAQEEM_API_KEY` instead.
-
-### Added
-
 - Python 3.14 declared in the classifiers. The `cp39-abi3` wheel already loads on it and
   `requires-python` has no upper bound, so 0.2.3's list stopping at 3.13 made the badge read
   as if the current Python line were unsupported.
@@ -307,7 +298,6 @@ that delegates all inference to an endpoint and never loads model weights.
 - No timestamps, diarization, VAD, or long-form chunking yet (see the roadmap in the README).
 
 [0.3.0]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.3.0
-[0.2.4]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.4
 [0.2.3]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.3
 [0.2.2]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.2
 [0.2.1]: https://github.com/SufficientDaikon/raqeem/releases/tag/v0.2.1
